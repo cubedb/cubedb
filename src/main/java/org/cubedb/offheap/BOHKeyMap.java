@@ -47,17 +47,18 @@ public class BOHKeyMap implements KeyMap {
 		Binary b = IntToBinary(v);
 		this.valueBinary.setValue(k);
 		Binary prev = this.map.put(this.valueBinary, b);
-		if (prev == null && this.map.size() >= this.numPartitions * 4) {
+		if (prev == null && this.map.size() >= this.numPartitions * 3) {
 			// Our map is now overgrown!
 
 			long t0 = System.nanoTime();
 			BOHMap oldMap = this.map;
-			createMap(this.map.size(), 0);
-			log.debug("Re-sizing map to {}", this.numPartitions);
+			createMap(this.map.size() * 2, 0);
+			log.debug("Re-sizing map to {}", this.map.size() * 2);
 			for (Entry<Binary, Binary> e : oldMap.entrySet()) {
 
 				this.map.put(e.getKey(), e.getValue());
 			}
+			oldMap.clear();
 			log.debug("Resizing done in {} mks", (System.nanoTime() - t0) / 1000);
 		}
 	}

@@ -27,7 +27,7 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 	private static final Logger log = LoggerFactory.getLogger(CachedCountersOffHeapPartition.class);
 	
 	public CachedCountersOffHeapPartition() {
-		this.counters = new HashMap<String, Map<String, Map<String, MutableLong>>>();
+		this.counters = null; //new HashMap<String, Map<String, Map<String, MutableLong>>>();
 		// initializeCounters();
 	}
 

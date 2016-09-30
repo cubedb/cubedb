@@ -42,7 +42,7 @@ public class CubeUtils {
 	public static <T> List<List<T>> partitionList(final List<T> in) {
 		final int numProcs = Runtime.getRuntime().availableProcessors();
 		final List<List<T>> out = partitionList(in, numProcs);
-		log.debug("Having {} available processors, split list into {} parts", numProcs, out.size());
+		//log.debug("Having {} available processors, split list into {} parts", numProcs, out.size());
 
 		return out;
 	}
