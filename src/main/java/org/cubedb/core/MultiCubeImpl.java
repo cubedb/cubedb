@@ -186,7 +186,9 @@ public class MultiCubeImpl implements MultiCube {
 					break;
 				i++;
 			}
-			log.debug("Removed {} partitions from {}", i, cubeName);
+			if(i>0){
+				log.debug("Removed {} partitions from {}", i, cubeName);
+			}
 		}
 		System.gc();
 		return deletedCount;

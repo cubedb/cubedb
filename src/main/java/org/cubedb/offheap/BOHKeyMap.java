@@ -49,11 +49,11 @@ public class BOHKeyMap implements KeyMap {
 		Binary prev = this.map.put(this.valueBinary, b);
 		if (prev == null && this.map.size() >= this.numPartitions * 3) {
 			// Our map is now overgrown!
-
+			int newSize = this.numPartitions * 5;
 			long t0 = System.nanoTime();
 			BOHMap oldMap = this.map;
-			createMap(this.map.size() * 2, 0);
-			log.debug("Re-sizing map to {}", this.map.size() * 2);
+			createMap(newSize, 0);
+			log.debug("Re-sizing map to {}", newSize);
 			for (Entry<Binary, Binary> e : oldMap.entrySet()) {
 
 				this.map.put(e.getKey(), e.getValue());
