@@ -6,16 +6,19 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.IntConsumer;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.io.IOUtils;
-import org.cubedb.api.utils.APIResponse;
 import org.cubedb.core.Cube;
 import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
@@ -29,6 +32,9 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
 import com.owlike.genson.GenericType;
 import com.owlike.genson.Genson;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestUtils {
 
@@ -206,6 +212,65 @@ public class TestUtils {
 		return new Genson().deserialize(content, new GenericType<List<DataRow>>(){});   
 	}
 	
+	public static List<DataRow> readFromJsonFileLineByLine(String gzipFile) throws FileNotFoundException, IOException{
+		GZIPInputStream source = new GZIPInputStream(new FileInputStream(new File(gzipFile)));
+		String content = IOUtils.toString(source);
+		List<DataRow> out = new ArrayList<DataRow>();
+		Genson g = new Genson();
+		GenericType<DataRow> t = new GenericType<DataRow>(){};
+		for(String line : content.split("\n"))
+			out.add(g.deserialize(line, t));
+			
+		return out;   
+	}
+	
+	public static <V> void compareSets(Set<V> left, Set<V> right){
+		for (V f : left) {
+			if (!right.contains(f)) {
+				log.info("{} does not exist in right", f);
+				assertTrue(false);
+			}
+		}
+		for (V f : right) {
+			if (!left.contains(f)) {
+				log.info("{} does not exist in left", f);
+				assertTrue(false);
+			}
+		}
+	}
+	
+	public static <K,V> void testGroupings(Collection<K> left, Collection<K> right, Function<K, V> grouper){
+		Map<V, Set<K>> leftGroup = left.stream().collect(Collectors.groupingBy(grouper, Collectors.toSet()));
+		Map<V, Set<K>> rightGroup = right.stream().collect(Collectors.groupingBy(grouper, Collectors.toSet()));
+		assertEquals(leftGroup.size(), rightGroup.size());
+		assertEquals(leftGroup.keySet(), rightGroup.keySet());
+		assertEquals(leftGroup.values().stream().mapToInt(e -> e.size() ).max(), rightGroup.values().stream().mapToInt(e -> e.size() ).max());
+		int in_out = 0;
+		int out_in = 0;
+		compareSets(leftGroup.keySet(), rightGroup.keySet());
+		for (V f : leftGroup.keySet()) {
+			if (!rightGroup.containsKey(f)) {
+				log.info("{} does not exist in out", f);
+				in_out++;
+				assertTrue(false);
+			}
+			compareSets(leftGroup.get(f), rightGroup.get(f));
+		}
+		for (V f : rightGroup.keySet()) {
+			if (!leftGroup.containsKey(f)) {
+				log.info("{} does not exist in out", f);
+				in_out++;
+				assertTrue(false);
+			}
+			compareSets(leftGroup.get(f), rightGroup.get(f));
+		}
+		//assertEquals(leftGroup.values(), rightGroup.values());
+		//log.info(new Genson().serialize(leftGroup));
+		//log.info(new Genson().serialize(rightGroup));
+		assertEquals(leftGroup, rightGroup);
+		
+	}
+	
 	
 	
 	public static File dumpToTmpFile(Partition p) throws FileNotFoundException, IOException
@@ -229,5 +294,19 @@ public class TestUtils {
 		destination.deleteOnExit();
 		return destination;	
 	}
+
+	public static File dumpCubeToTmpFileAsJson(Cube c, String cubeName) 
+		throws FileNotFoundException, IOException
+		{
+			long t0 = System.nanoTime();
+			File destination = File.createTempFile("cube_", ".gz");
+			c.saveAsJson(destination.getAbsolutePath(), cubeName);
+			log.info("Destination file is {}", destination.getAbsolutePath());
+			destination.deleteOnExit();
+			long t1 = System.nanoTime();
+			log.info("Took {} ms to write cube", (t1 - t0) / 1000000);
+			return destination;	
+		}
+	
 
 }

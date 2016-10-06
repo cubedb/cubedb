@@ -1,6 +1,10 @@
 package org.cubedb.offheap;
 
+import java.util.Map.Entry;
+import java.util.stream.Stream;
+
 import org.cubedb.api.KeyMap;
+import org.cubedb.core.beans.Pair;
 
 
 
@@ -37,4 +41,8 @@ public class DummyKeyMap implements KeyMap {
 		return 0;
 	}
 
+	@Override
+	public Stream<Entry<byte[], Integer>> entrySet() {
+		return null;
+	}
 }

@@ -2,9 +2,11 @@ package org.cubedb.offheap;
 
 import java.nio.ByteBuffer;
 import java.util.Map.Entry;
+import java.util.stream.Stream;
 
 import org.cubedb.api.KeyMap;
 import org.cubedb.core.Constants;
+import org.cubedb.core.beans.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +81,11 @@ public class BOHKeyMap implements KeyMap {
 		ByteBuffer buf = ByteBuffer.wrap(new byte[4]);
 		buf.putInt( v);
 		return new Binary(buf.array());
+	}
+
+	@Override
+	public Stream<Entry<byte[], Integer>> entrySet() {
+		return this.map.entrySet().stream().map((e) -> new Pair<byte[], Integer>(e.getKey().getValue(), BinaryToInt(e.getValue())));
 	}
 
 }

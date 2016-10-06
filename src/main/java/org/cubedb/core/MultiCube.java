@@ -22,11 +22,14 @@ public interface MultiCube {
 	public int deleteCube(String cubeName, String fromPartition, String toPartition);
 	public int deleteCube(String cubeName, int keepLastN);
 	public int deleteCube(int keepLastN);
+	public int deleteCube(String fromPartition, String toPartition);
 
 	public String getPath();
 
 	void load(String path);
 	
 	Map<String, Object> getStats();
+	
+	public void saveAsJson(String path);
 	
 }

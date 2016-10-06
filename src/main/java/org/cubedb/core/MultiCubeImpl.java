@@ -77,6 +77,10 @@ public class MultiCubeImpl implements MultiCube {
 
 	@Override
 	public void save(String path) {
+		this.save(path, false);
+	}
+	
+	public void save(String path, boolean asJson) {
 		if (this.isCurrentlySavingOrLoading) {
 			log.warn("Process of saving or loading is currently in progress.");
 			return;
@@ -96,13 +100,16 @@ public class MultiCubeImpl implements MultiCube {
 			for (Entry<String, Cube> e : this.cubes.entrySet()) {
 				String saveFileName = destination.getAbsolutePath() + "/" + e.getKey() + ".gz";
 				try {
-					e.getValue().save(saveFileName);
+					if(asJson)
+						e.getValue().save(saveFileName);
+					else
+						e.getValue().saveAsJson(saveFileName, e.getKey());
 					File f = new File(saveFileName);
 					File newF = new File(p, f.getName());
 					f.renameTo(newF);
 
 				} catch (FileNotFoundException e1) {
-					log.error("Fiel not found: {}", saveFileName);
+					log.error("File not found: {}", saveFileName);
 					log.error("error", e1);
 				} catch (IOException e1) {
 					log.error("Could not save {} in {}", e.getKey(), saveFileName);
@@ -190,7 +197,6 @@ public class MultiCubeImpl implements MultiCube {
 				log.debug("Removed {} partitions from {}", i, cubeName);
 			}
 		}
-		System.gc();
 		return deletedCount;
 
 	}
@@ -201,7 +207,15 @@ public class MultiCubeImpl implements MultiCube {
 		for (String cubeName : this.cubes.keySet()) {
 			c += this.deleteCube(cubeName, keepLastN);
 		}
-		System.gc();
+		return c;
+	}
+	
+	@Override
+	public int deleteCube(String fromPartition, String toPartition) {
+		int c = 0;
+		for (String cubeName : this.cubes.keySet()) {
+			c += this.deleteCube(cubeName, fromPartition, toPartition);
+		}
 		return c;
 	}
 
@@ -233,6 +247,12 @@ public class MultiCubeImpl implements MultiCube {
 				.mapToInt(e -> (Integer) e.get(Constants.STATS_NUM_LARGE_BLOCKS)).sum());
 		out.put(Constants.STATS_NUM_CUBES, partitionStats.size());
 		return out;
+	}
+	
+	@Override
+	public void saveAsJson(String path)
+	{
+		this.save(path, true);
 	}
 
 }

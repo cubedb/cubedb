@@ -1,8 +1,10 @@
 package org.cubedb.core;
 
 import java.io.File;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
@@ -17,4 +19,5 @@ public interface Partition extends KryoSerializable{
 	SearchResult get(List<Filter> filters);
 	int getNumRecords();
 	Map<String, Object> getStats();
+	Stream<DataRow> asDataRowStream();
 }

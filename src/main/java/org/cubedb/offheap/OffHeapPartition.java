@@ -2,6 +2,7 @@ package org.cubedb.offheap;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,6 +12,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.cubedb.api.KeyMap;
 import org.cubedb.core.Column;
@@ -370,96 +372,6 @@ public class OffHeapPartition implements Partition {
 		return true;
 	}
 
-	@Deprecated
-	public SearchResult getOld(List<Filter> filters) {
-		// log.debug("Starting search");
-		long t0 = System.nanoTime();
-		int curSize = size;
-		// creating an empty result set, with id's
-		final String[] metricNames = this.metricLookup.getKeys();
-		final long[] totalCounters = new long[metricNames.length];
-
-		// field names -> (field id -> (metric name -> counter))
-		final long[][][] sideCounters = initSideCounters();
-		final Column[] columns = getColumnsAsArray();
-
-		int matchCount = 0;
-		final long t2, t3;
-		// creating a map of matchers based on filter
-		final boolean[] columnMatches = new boolean[this.fieldLookup.size()];
-		final long metricValues[] = new long[metricNames.length];
-		final IdMatcher[] matchersArray = new IdMatcher[this.fieldLookup.size()];
-		final Metric[] metricsArray = new Metric[this.metricLookup.size()];
-		try {
-			final Map<String, IdMatcher> matchers = transformFiltersToMatchers(filters);
-
-			for (Entry<String, IdMatcher> e : matchers.entrySet()) {
-				int field_id = this.fieldLookup.getValue(e.getKey());
-				matchersArray[field_id] = e.getValue();
-			}
-
-			for (Entry<String, Metric> e : metrics.entrySet()) {
-				int field_id = this.metricLookup.getValue(e.getKey());
-				metricsArray[field_id] = e.getValue();
-			}
-
-			// matching itself
-			t2 = System.nanoTime();
-			for (int i = 0; i < curSize; i++) {
-				boolean rowMatches = true;
-
-				for (int matcherId = 0; matcherId < matchersArray.length; matcherId++) {
-					IdMatcher matcher = matchersArray[matcherId];
-					columnMatches[matcherId] = true;
-					if (matcher != null) {
-						final int valueId = columns[matcherId].get(i);
-						rowMatches = matcher.match(valueId);
-						if (!rowMatches) {
-							columnMatches[matcherId] = false;
-							break;
-						}
-					}
-				}
-				if (rowMatches) {
-					// We have a match!
-					matchCount++;
-					// First, we retrieve the counters
-					for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-
-						final long c = metricsArray[mIndex].get(i);
-						metricValues[mIndex] = c;
-					}
-
-					for (int side = 0; side < this.fieldLookup.size(); side++) {
-						final int columnId = columns[side].get(i);
-						for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-							sideCounters[side][columnId][mIndex] += metricValues[mIndex];
-						}
-					}
-
-				}
-			}
-			t3 = System.nanoTime();
-			for (int i = 0; i < sideCounters[0].length; i++)
-				for (int mIndex = 0; mIndex < metricNames.length; mIndex++)
-					totalCounters[mIndex] += sideCounters[0][i][mIndex];
-
-		} catch (ColumnDoesNotExistException e) {
-			log.warn(e.getMessage());
-			return null;
-		}
-		final SearchResult result = convertToResult(sideCounters, totalCounters);
-		final long t1 = System.nanoTime();
-		log.debug("Got {} matches for the query in {}ms among {} rows", matchCount, (t1 - t0) / 1000000.0, curSize);
-		if (curSize > 0 && (t3 - t2) > 0) {
-			int rowsPerSecond = (int) (1000000000l * curSize / (t3 - t2));
-			log.debug("Bruteforce search itself took {} ms", (t3 - t2) / 1000000.0);
-			log.debug("Bruteforce search is {} rows/second", rowsPerSecond);
-		}
-		return result;
-
-	}
-
 	protected SearchResult getEmptySearchResult() {
 		Map<String, Long> totalCounts = new HashMap<String, Long>();
 		for (String metricName : this.metrics.keySet()) {
@@ -615,6 +527,51 @@ public class OffHeapPartition implements Partition {
 		this.columns = (Map<String, Column>) kryo.readClassAndObject(input);
 		this.metrics = (Map<String, Metric>) kryo.readClassAndObject(input);
 		this.initializeMap();
+	}
+	
+	
+
+	protected Map<String, String> bytesToMap(byte[] in){
+		Map<String, String> out = new HashMap<String, String>();
+		ByteBuffer b = ByteBuffer.wrap(in);
+		for(int i=0; i<this.fieldLookup.size() ;i++)
+		{
+			String fieldName = this.fieldLookup.getKey(i);
+			String fieldValue;
+			if(b.remaining()>0){
+				int fieldId = b.getShort();
+				fieldValue = this.lookups.get(fieldName).getKey(fieldId);
+				fieldValue = fieldValue.equals("null")?null:fieldValue;
+			}
+			else
+				fieldValue = null;
+			out.put(fieldName, fieldValue);
+			
+		}
+		return out;
+	}
+	
+	protected Map<String, Long> metricsToMap(int offset){
+		Map<String, Long> out = new HashMap<String, Long>();
+		for(int i=0; i<this.metricLookup.size();i++)
+		{
+			String metricName = this.metricLookup.getKey(i);
+			Long metricValue = this.metrics.get(metricName).get(offset); 
+			out.put(metricName, metricValue);
+		}
+		return out;
+	}
+	
+	@Override
+	public Stream<DataRow> asDataRowStream() {
+		return this.map.entrySet().map(e -> {
+			DataRow r = new DataRow();
+			r.setFields(this.bytesToMap(e.getKey()));
+			int offset = e.getValue();
+			r.setCounters(metricsToMap(offset));
+			return r;
+		});
+
 	}
 
 }

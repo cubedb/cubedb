@@ -3,27 +3,20 @@ package com.badoo.cube.api.resources;
 import static org.junit.Assert.*;
 
 import java.net.URI;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.ws.rs.NotFoundException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Request;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 
 import org.cubedb.api.resources.CubeResource;
 import org.cubedb.api.utils.APIResponse;
 import org.cubedb.core.MultiCube;
 import org.cubedb.core.MultiCubeImpl;
 import org.cubedb.core.beans.DataRow;
-import org.cubedb.core.beans.Filter;
-import org.cubedb.core.beans.SearchResultRow;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -88,7 +81,7 @@ public class CubeResourceGeneralTest {
 		  String response = webTarget.path("v1/insert")
 				.request().post(entity,String.class);
 		
-		  APIResponse<Integer> outInsert = new Genson().deserialize(response, new GenericType<APIResponse<Integer>>(){});
+		  APIResponse<Map<String, Integer>> outInsert = new Genson().deserialize(response, new GenericType<APIResponse<Map<String, Integer>>>(){});
 		  }
 		  String response = webTarget.path("v1/"+cubeName+"/last/120")
 				  .queryParam("f_1", "f_1_0")
@@ -111,7 +104,7 @@ public class CubeResourceGeneralTest {
 		  String response = webTarget.path("v1/insert")
 				.request().post(entity,String.class);
 		
-		  APIResponse<Integer> outInsert = new Genson().deserialize(response, new GenericType<APIResponse<Integer>>(){});
+		  APIResponse<Map<String, Integer>> outInsert = new Genson().deserialize(response, new GenericType<APIResponse<Map<String, Integer>>>(){});
 		  
 		  response = webTarget.path("v1/"+cubeName+"/last/120")
 				  .queryParam("app_version", "2.61.0")

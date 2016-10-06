@@ -1,9 +1,14 @@
 package org.cubedb.core;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -40,6 +45,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import com.owlike.genson.Genson;
 
 public class CubeImpl implements Cube {
 	public static final Logger log = LoggerFactory.getLogger(CubeImpl.class);
@@ -123,11 +129,11 @@ public class CubeImpl implements Cube {
 			String fromPartition, String toPartition) {
 		Map<SearchResultRow, MutableLong> out = new HashMap<SearchResultRow, MutableLong>();
 		for (Pair<String, Partition> e : partitions) {
-			String partitionValue = e.getT();
+			String partitionValue = e.getKey();
 			boolean partitionMatch = partitionValue.compareTo(fromPartition) >= 0
 					&& partitionValue.compareTo(toPartition) <= 0;
 
-			SearchResult searchResult = e.getV().get(filters);
+			SearchResult searchResult = e.getValue().get(filters);
 			if (partitionMatch) {
 				for (Entry<SearchResultRow, Long> sr : searchResult.getResults().entrySet()) {
 					MutableLong c = out.get(sr.getKey());
@@ -190,9 +196,9 @@ public class CubeImpl implements Cube {
 				.orElse(toPartition);
 		Collections.shuffle(partitions);
 		final List<List<Pair<String, Partition>>> partitionSlices = CubeUtils.partitionList(partitions);
-		 log.info("Partitions are distributed in this way: {}",
-		 partitionSlices.stream().map( s -> s.stream().map(p ->
-		 p.getT()).collect(Collectors.toList()).toString()).collect(Collectors.toList()));
+		 //log.info("Partitions are distributed in this way: {}",
+		 //partitionSlices.stream().map( s -> s.stream().map(p ->
+		 //p.getT()).collect(Collectors.toList()).toString()).collect(Collectors.toList()));
 		Searcher[] searchers = new Searcher[partitionSlices.size()];
 		Thread[] threads = new Thread[partitionSlices.size()];
 		for (int i = 0; i < searchers.length; i++) {
@@ -250,7 +256,7 @@ public class CubeImpl implements Cube {
 	@Override
 	public void save(String saveFileName) throws IOException {
 		Kryo kryo = new Kryo();
-		GZIPOutputStream zip = new GZIPOutputStream(new FileOutputStream(saveFileName));
+		OutputStream zip = new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(saveFileName)));
 		Output output = new Output(zip);
 		kryo.writeClassAndObject(output, this.partitions);
 		// zip.closeEntry();
@@ -261,7 +267,7 @@ public class CubeImpl implements Cube {
 	@Override
 	public void load(String saveFileName) throws IOException {
 		Kryo kryo = new Kryo();
-		GZIPInputStream zip = new GZIPInputStream(new FileInputStream(saveFileName));
+		InputStream zip = new GZIPInputStream(new BufferedInputStream(new FileInputStream(saveFileName)));
 		Input input = new Input(zip);
 		this.partitions = (Map<String, Partition>) kryo.readClassAndObject(input);
 		input.close();
@@ -282,6 +288,28 @@ public class CubeImpl implements Cube {
 		out.put(Constants.STATS_NUM_LARGE_BLOCKS, partitionStats.values().stream().mapToInt(e -> (Integer)e.get(Constants.STATS_NUM_LARGE_BLOCKS)).sum());
 		out.put(Constants.STATS_NUM_PARTITIONS, partitionStats.size());
 		return out;
+	}
+	
+	@Override
+	public void saveAsJson(String saveFileName, String cubeName){
+		Genson g = new Genson();
+		try {
+			PrintStream p = new PrintStream(new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(saveFileName))));
+			this.partitions
+				.entrySet()
+				.stream()
+				.flatMap( (e) -> e.getValue()
+							.asDataRowStream()
+							.peek((row) -> row.setPartition(e.getKey()))
+						)
+				.peek( (row) -> row.setCubeName(cubeName))
+				.map( (row) -> g.serialize(row))
+				.forEach((rowString) -> p.println(rowString));
+			p.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }

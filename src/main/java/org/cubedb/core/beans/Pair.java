@@ -1,6 +1,8 @@
 package org.cubedb.core.beans;
 
-public class Pair<T, V> {
+import java.util.Map;
+
+public class Pair<T, V> implements Map.Entry<T,V>{
 	private T t;
 	private V v;
 
@@ -9,21 +11,6 @@ public class Pair<T, V> {
 		this.v = v;
 	}
 
-	public T getT() {
-		return t;
-	}
-
-	public void setT(T t) {
-		this.t = t;
-	}
-
-	public V getV() {
-		return v;
-	}
-
-	public void setV(V v) {
-		this.v = v;
-	}
 
 	@Override
 	public int hashCode() {
@@ -59,6 +46,22 @@ public class Pair<T, V> {
 	@Override
 	public String toString() {
 		return "Pair [t=" + t + ", v=" + v + "]";
+	}
+
+	@Override
+	public T getKey() {
+		return this.t;
+	}
+
+	@Override
+	public V getValue() {
+		return this.v;
+	}
+
+	@Override
+	public V setValue(V value) {
+		this.v = value;
+		return this.v;
 	}
 
 	

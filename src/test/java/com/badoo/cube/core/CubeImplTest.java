@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 import org.cubedb.core.Cube;
 import org.cubedb.core.CubeImpl;
@@ -204,4 +206,50 @@ public class CubeImplTest {
 		Cube newCube = new CubeImpl("ts");
 		newCube.load(out.getAbsolutePath());
 	}
+
+	@Test
+	public void testSerDeJson() throws FileNotFoundException, IOException {
+		Cube cube = new CubeImpl("ts");
+		List<DataRow> inData = TestUtils.readFromJsonFile("src/test/resources/dumps/faulty.json.gz");
+		cube.insert(inData);
+		log.info("Starting test");
+		File out = TestUtils.dumpCubeToTmpFileAsJson(cube, inData.get(0).getCubeName());
+		List<DataRow> outData = TestUtils.readFromJsonFileLineByLine(out.getAbsolutePath());
+		log.info("{}", outData.get(0));
+		TestUtils.testGroupings(inData, outData, DataRow::getPartition);
+		TestUtils.testGroupings(inData, outData, DataRow::getCounters);
+		TestUtils.testGroupings(inData, outData, DataRow::getFields);
+		TestUtils.testGroupings(inData, outData, DataRow::getCubeName);
+	}
+
+	@Test
+	public void testJsonSerDe2() throws FileNotFoundException, IOException {
+		int numFields = 6;
+		int numValues = 4;
+		int numPartitions = 3;
+		Cube cube = new CubeImpl("ts");
+		List<DataRow> inData = new ArrayList<DataRow>();
+		for (int i = 0; i < numPartitions; i++) {
+			List<DataRow> data = TestUtils.genMultiColumnData("f", numFields, numValues);
+			String partition = "p_" + (1000 + i);
+			for (DataRow d : data) {
+				d.setPartition(partition);
+			}
+			
+			inData.addAll(data);
+			
+		}
+		cube.insert(inData);
+		File dstF = File.createTempFile("cube", ".zip");
+		log.info("Saving cube to {}", dstF.getAbsolutePath());
+		cube.saveAsJson(dstF.getAbsolutePath(), "cubeName");
+		List<DataRow> outData = TestUtils.readFromJsonFileLineByLine(dstF.getAbsolutePath());
+		TestUtils.testGroupings(inData, outData, DataRow::getPartition);
+		TestUtils.testGroupings(inData, outData, DataRow::getCounters);
+		TestUtils.testGroupings(inData, outData, DataRow::getFields);
+		TestUtils.testGroupings(inData, outData, DataRow::getCubeName);
+		//dstF.deleteOnExit();
+		// cube.in
+	}
+	
 }

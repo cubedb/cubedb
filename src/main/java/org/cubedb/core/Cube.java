@@ -23,4 +23,5 @@ public interface Cube {
 	void save(String saveFileName) throws FileNotFoundException, IOException;
 	void load(String saveFileName) throws IOException;
 	Map<String, Object> getStats();
+	void saveAsJson(String saveFileName, String cubeName);
 }

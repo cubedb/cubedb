@@ -121,7 +121,7 @@ public class CubeResourceTest {
 		  String r = webTarget.path("v1/insert")
 				.request().post(entity,String.class);
 		
-		  APIResponse<Integer> out = new Genson().deserialize(r, new GenericType<APIResponse<Integer>>(){});
+		  APIResponse<Map<String, Integer>> out = new Genson().deserialize(r, new GenericType<APIResponse<Map<String, Integer>>>(){});
 		  //assertTrue(exceptionRaised);
 		  log.info("{}", out);
 	  }
