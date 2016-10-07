@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.cubedb.core.Cube;
 import org.cubedb.core.CubeImpl;
+import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.SearchResultRow;
@@ -108,9 +109,12 @@ public class CubeImplTest {
 			}
 			cube.insert(data);
 			size += data.size();
+			TestUtils.ensureSidesAddUp(cube.get(partition, partition, new ArrayList<Filter>()));
+			TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>()));
 		}
 		log.info("Starting test");
 		long t0, t1, recordsPerSecond;
+		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>()));
 		for (int i = 0; i < 10; i++) {
 			t0 = System.nanoTime();
 			Map<SearchResultRow, Long> result = cube.get("p_1000", "p_" + (1100 + numPartitions),
@@ -202,6 +206,7 @@ public class CubeImplTest {
 		List<DataRow> data = TestUtils.readFromJsonFile("src/test/resources/dumps/faulty.json.gz");
 		cube.insert(data);
 		log.info("Starting test");
+		TestUtils.ensureSidesAddUp(cube.get("0", "z", new ArrayList<Filter>()));
 		File out = TestUtils.dumpCubeToTmpFile(cube);
 		Cube newCube = new CubeImpl("ts");
 		newCube.load(out.getAbsolutePath());
@@ -235,9 +240,9 @@ public class CubeImplTest {
 			for (DataRow d : data) {
 				d.setPartition(partition);
 			}
-			
+
 			inData.addAll(data);
-			
+
 		}
 		cube.insert(inData);
 		File dstF = File.createTempFile("cube", ".zip");
@@ -248,8 +253,44 @@ public class CubeImplTest {
 		TestUtils.testGroupings(inData, outData, DataRow::getCounters);
 		TestUtils.testGroupings(inData, outData, DataRow::getFields);
 		TestUtils.testGroupings(inData, outData, DataRow::getCubeName);
-		//dstF.deleteOnExit();
+		// dstF.deleteOnExit();
 		// cube.in
 	}
-	
+
+	@Test
+	public void counterConsistencyTest() throws FileNotFoundException, IOException {
+		CubeImpl cube = new CubeImpl("p");
+		cube.insert(TestUtils.genDataRowList("p_1000", "f1", "v1", "old_field", "not_null"));
+		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_1000", new ArrayList<Filter>()));
+		cube.insert(TestUtils.genDataRowList("p_1000", "f1", "v2", "old_field", "not_null"));
+		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_1000", new ArrayList<Filter>()));
+		cube.insert(TestUtils.genDataRowList("p_1000", "new_field", "not_null"));
+		TestUtils.ensureSidesAddUp(cube.get("p_100", "p_2000", new ArrayList<Filter>()));
+	}
+
+	@Test
+	public void counterConsistencyTestLarge() throws FileNotFoundException, IOException {
+		int numColumns = 1;
+		int numValues = 2;
+		int numPartitions = 3;
+		CubeImpl cube = new CubeImpl("p");
+		for (int i = 0; i < numPartitions; i++) {
+			List<DataRow> data = TestUtils.genMultiColumnData("f", numColumns + numPartitions, numValues);
+
+			// List<DataRow> data = TestUtils.genSimpleData("f0", "c",
+			// numRecords);
+			String partition = "p_" + (1000 + i);
+			for (DataRow d : data) {
+				d.setPartition(partition);
+			}
+			cube.insert(data);
+			TestUtils.ensureSidesAddUp(cube.get(partition, partition, new ArrayList<Filter>()));
+			TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>()));
+		}
+
+		cube.insert(TestUtils.genDataRowList("p_1000", "new_field", "not_null"));
+		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>()));
+		cube.insert(TestUtils.genDataRowList("p_1100", "new_field", "not_null"));
+		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>()));
+	}
 }

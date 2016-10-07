@@ -1,15 +1,17 @@
 package org.cubedb.utils;
 
 public class MutableLong {
-	
+
 	long value;
-	public MutableLong(){
+
+	public MutableLong() {
 		this(0l);
 	}
-	
-	public MutableLong(long initialValue){
+
+	public MutableLong(long initialValue) {
 		this.value = initialValue;
 	}
+
 	public MutableLong increment(long v) {
 		value += v;
 		return this;
@@ -28,6 +30,11 @@ public class MutableLong {
 	}
 
 	@Override
+	public String toString() {
+		return "MutableLong [value=" + value + "]";
+	}
+
+	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
@@ -40,6 +47,5 @@ public class MutableLong {
 			return false;
 		return true;
 	}
-	
-	
+
 }

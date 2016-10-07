@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.security.InvalidParameterException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,7 @@ import java.util.stream.Collectors;
 
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
+import org.cubedb.core.beans.Pair;
 import org.cubedb.core.beans.SearchResultRow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -128,6 +130,8 @@ public class MultiCubeImpl implements MultiCube {
 
 	@Override
 	public void load(String path) {
+		long t0 = System.currentTimeMillis();
+		
 		if (this.isCurrentlySavingOrLoading) {
 			log.warn("Process of saving or loading is currently in progress.");
 			return;
@@ -139,6 +143,7 @@ public class MultiCubeImpl implements MultiCube {
 				log.error("Attempting to load from directory");
 				throw new InvalidParameterException("Path specified is a file");
 			}
+			
 			for (File cubeFile : p.listFiles()) {
 				log.info("Loading from file {}", cubeFile.getAbsolutePath());
 				String cubeName = cubeFile.getName().replace(".gz", "");
@@ -150,11 +155,36 @@ public class MultiCubeImpl implements MultiCube {
 					log.error("Could no load cube {}", cubeName);
 				}
 
-			}
+			} 
+			// this.loadParallel(p);
 		} else {
 			log.warn("Save path {} does not exist. It will be created next time when saving", path);
 		}
 		this.isCurrentlySavingOrLoading = false;
+		long t1 = System.currentTimeMillis();
+		log.info("Loading time: {}ms", t1 - t0);
+	}
+
+
+	public void loadParallel(File p) {
+		this.cubes = 
+		Arrays.stream(p.listFiles())
+		.parallel()
+		.map( cubeFile -> { 
+			log.info("Loading from file {}", cubeFile.getAbsolutePath());
+				String cubeName = cubeFile.getName().replace(".gz", "");
+				Cube c = createNewCube(partitionColumnName);
+				try {
+					c.load(cubeFile.getAbsolutePath());
+				} catch (IOException e) {
+					cubeName = null;
+					log.error("Could no load cube {}", cubeName);
+				}
+				return new Pair<String, Cube>(cubeName, c);
+			})
+		.filter(e -> e.getKey()!=null)
+		.collect(Collectors.toMap(Pair::getKey, Pair::getValue));
+		
 	}
 
 	@Override

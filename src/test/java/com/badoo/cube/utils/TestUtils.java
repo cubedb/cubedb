@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.LongSummaryStatistics;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -23,6 +24,7 @@ import org.cubedb.core.Cube;
 import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
+import org.cubedb.core.beans.SearchResult;
 import org.cubedb.core.beans.SearchResultRow;
 import org.cubedb.offheap.OffHeapPartition;
 import org.slf4j.Logger;
@@ -78,6 +80,14 @@ public class TestUtils {
 		r.setFields(fields);
 		r.setCounters(counters);
 		return r;
+	}
+	
+	public static List<DataRow> genDataRowList(String partitionName, String... fieldsAndValues) {
+		List<DataRow> out = new ArrayList<DataRow>();
+		DataRow r = genDataRow(fieldsAndValues);
+		r.setPartition(partitionName);
+		out.add(r);
+		return out;
 	}
 
 	public static List<DataRow> genSimpleRepeatableData(String fieldName, String value, String counterName, int count) {
@@ -307,6 +317,18 @@ public class TestUtils {
 			log.info("Took {} ms to write cube", (t1 - t0) / 1000000);
 			return destination;	
 		}
+	
+	public static void ensureSidesAddUp(Map<SearchResultRow,Long> result)
+	{
+		Map<String, LongSummaryStatistics> sideTotals = result.entrySet().stream().collect(Collectors.groupingBy(e -> e.getKey().getFieldName(), Collectors.summarizingLong(e-> e.getValue().longValue())));
+		int numDistinctValues =  sideTotals.values().stream().map(LongSummaryStatistics::getSum).distinct().collect(Collectors.toList()).size();
+		if(numDistinctValues!=1)
+		{
+			log.error("Sides do not add up");
+			sideTotals.entrySet().forEach(e -> log.info("{}: {}", e.getKey(),e.getValue().getSum()));
+		}
+		assertEquals(1, numDistinctValues);
+	}
 	
 
 }

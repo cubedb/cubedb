@@ -36,6 +36,7 @@ import org.cubedb.core.beans.Pair;
 import org.cubedb.core.beans.SearchResult;
 import org.cubedb.core.beans.SearchResultRow;
 import org.cubedb.offheap.CachedCountersOffHeapPartition;
+import org.cubedb.offheap.OffHeapPartition;
 import org.cubedb.utils.CubeUtils;
 import org.cubedb.utils.MutableLong;
 import org.slf4j.Logger;
@@ -45,6 +46,7 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.minlog.Log;
 import com.owlike.genson.Genson;
 
 public class CubeImpl implements Cube {
@@ -60,7 +62,8 @@ public class CubeImpl implements Cube {
 	}
 
 	private Partition createNewPartition(String partitionName) {
-		Partition p = new CachedCountersOffHeapPartition();
+		//Partition p = new CachedCountersOffHeapPartition();
+		Partition p = new OffHeapPartition();
 		return p;
 	}
 
@@ -255,7 +258,7 @@ public class CubeImpl implements Cube {
 
 	@Override
 	public void save(String saveFileName) throws IOException {
-		Kryo kryo = new Kryo();
+		Kryo kryo = CubeUtils.getKryoWithRegistrations();
 		OutputStream zip = new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(saveFileName)));
 		Output output = new Output(zip);
 		kryo.writeClassAndObject(output, this.partitions);
@@ -266,7 +269,8 @@ public class CubeImpl implements Cube {
 
 	@Override
 	public void load(String saveFileName) throws IOException {
-		Kryo kryo = new Kryo();
+		Kryo kryo = CubeUtils.getKryoWithRegistrations();
+		Log.TRACE();
 		InputStream zip = new GZIPInputStream(new BufferedInputStream(new FileInputStream(saveFileName)));
 		Input input = new Input(zip);
 		this.partitions = (Map<String, Partition>) kryo.readClassAndObject(input);

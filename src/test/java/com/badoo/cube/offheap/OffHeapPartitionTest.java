@@ -410,7 +410,44 @@ public class OffHeapPartitionTest {
 		Partition newP = (Partition)kryo.readClassAndObject(input);
 		long t1 = System.nanoTime();
 		log.info("Took {} ms to read {} records", (t1 - t0) / 1000000, newP.getNumRecords());
-		log.info("{}", newP.getStats());
+		log.info("{}", newP.getStats());		
+	}
+	
+	@Test
+	public void counterConsistencyTest() throws FileNotFoundException, IOException
+	{
+		Partition p = createPartition();
+		p.insert(TestUtils.genDataRow("f1", "v1"));
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v1"));
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		p.insert(TestUtils.genDataRow("f1", "v1"));
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		p.insert(TestUtils.genDataRow("f1", "v1", "f3", null));
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		p.insert(TestUtils.genDataRow("f1", "v1"));
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		p.insert(TestUtils.genDataRow("new_field", null));
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+	}
+	
+	@Test
+	public void counterConsistencyTestLarge() throws FileNotFoundException, IOException
+	{
+		int numColumns = 5;
+		int numValues = 6;
+		Partition p = createPartition();
 		
+		for(DataRow r: TestUtils.genMultiColumnData("f1", numColumns, numValues))
+			p.insert(r);
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		for(DataRow r: TestUtils.genMultiColumnData("f1", numColumns+1, numValues))
+			p.insert(r);
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		for(DataRow r: TestUtils.genMultiColumnData("f1", numColumns+1, numValues+1))
+			p.insert(r);
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		p.insert(TestUtils.genDataRow("new_field", null));
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
 	}
 }

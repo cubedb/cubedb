@@ -77,7 +77,7 @@ public class OffHeapPartition implements Partition {
 	}
 
 	protected void createMap(int fieldsLength) {
-		//this.map = new MapDBKeyMap(size, fieldsLength);
+		// this.map = new MapDBKeyMap(size, fieldsLength);
 		this.map = new DummyKeyMap(size, fieldsLength);
 		this.map = new BOHKeyMap(size, fieldsLength);
 	}
@@ -119,7 +119,7 @@ public class OffHeapPartition implements Partition {
 		}
 		// log.debug("Done initializing map. Took {}ms",
 		// System.currentTimeMillis() - t0);
-		//System.gc();
+		// System.gc();
 	}
 
 	// TODO: refactor to accept int[], long[]
@@ -152,8 +152,9 @@ public class OffHeapPartition implements Partition {
 				String fieldName = this.fieldLookup.getKey(i);
 				// log.debug("Writing {}={} to buffers", fieldName, fields[i]);
 				Column col = this.columns.get(fieldName);
-				if (col.isTiny() && col.getNumRecords() > Constants.INITIAL_PARTITION_SIZE ) {
-					//log.debug("There  are {} records, converting TinyColumn {} to OffHeap", col.getNumRecords(), fieldName);
+				if (col.isTiny() && col.getNumRecords() > Constants.INITIAL_PARTITION_SIZE) {
+					// log.debug("There are {} records, converting TinyColumn {}
+					// to OffHeap", col.getNumRecords(), fieldName);
 					col = TinyUtils.tinyColumnToOffHeap((TinyColumn) col);
 					this.columns.put(fieldName, col);
 				}
@@ -163,7 +164,8 @@ public class OffHeapPartition implements Partition {
 				Metric m = e.getValue();
 				String metricName = e.getKey();
 				if (m.isTiny() && m.getNumRecords() > Constants.INITIAL_PARTITION_SIZE) {
-					//log.debug("Converting TinyMetric {} to OffHeap", metricName);
+					// log.debug("Converting TinyMetric {} to OffHeap",
+					// metricName);
 					m = TinyUtils.tinyMetricToOffHeap((TinyMetric) m);
 					this.metrics.put(metricName, m);
 				}
@@ -290,28 +292,6 @@ public class OffHeapPartition implements Partition {
 
 	}
 
-	@Deprecated
-	protected Map<String, List<Map<String, MutableLong>>> initSideCounters2() {
-		final Map<String, List<Map<String, MutableLong>>> sideCounters = new HashMap<String, List<Map<String, MutableLong>>>(
-				this.columns.size());
-
-		// creating an empty result set, with id's
-		for (Entry<String, Lookup> e : this.lookups.entrySet()) {
-			int numKeys = e.getValue().getKeys().length;
-			final List<Map<String, MutableLong>> sideCounter = new ArrayList<Map<String, MutableLong>>(numKeys);
-			for (int id = 0; id < numKeys; id++) {
-				final Map<String, MutableLong> m = new HashMap<String, MutableLong>(this.metrics.size());
-				for (String metric : this.metrics.keySet()) {
-					m.put(metric, new MutableLong());
-				}
-				sideCounter.add(m);
-			}
-			sideCounters.put(e.getKey(), sideCounter);
-		}
-
-		return sideCounters;
-	}
-
 	protected long[][][] initSideCounters() {
 		// log.debug("Metrics look like this: {}",
 		// (Object)this.metricLookup.getKeys());
@@ -362,16 +342,6 @@ public class OffHeapPartition implements Partition {
 		return new SearchResult(result, totalCounts);
 	}
 
-	protected boolean otherColumnsMatch(boolean[] matches, int column) {
-		for (int i = 0; i < matches.length; i++) {
-			if (i == column)
-				continue;
-			if (!matches[i])
-				return false;
-		}
-		return true;
-	}
-
 	protected SearchResult getEmptySearchResult() {
 		Map<String, Long> totalCounts = new HashMap<String, Long>();
 		for (String metricName : this.metrics.keySet()) {
@@ -418,7 +388,7 @@ public class OffHeapPartition implements Partition {
 			// matching itself
 			t2 = System.nanoTime();
 			for (int i = 0; i < curSize; i++) {
-				boolean rowMatches = true;
+				// boolean rowMatches = true;
 
 				for (int matcherId = 0; matcherId < matchersArray.length; matcherId++) {
 					IdMatcher matcher = matchersArray[matcherId];
@@ -429,46 +399,75 @@ public class OffHeapPartition implements Partition {
 						columnMatches[matcherId] = matcher.match(valueId);
 					}
 				}
+				if (atLeastOneMatch(columnMatches)) {
+					// We have a match!
+					// First, we retrieve the counters
+					for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
+						final long c = metricsArray[mIndex].get(i);
+						metricValues[mIndex] = c;
+					}
 
-				// We have a match!
-				matchCount++;
-				// First, we retrieve the counters
-				for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-					final long c = metricsArray[mIndex].get(i);
-					metricValues[mIndex] = c;
+					for (int side = 0; side < this.fieldLookup.size(); side++) {
+						final int columnId = columnValues[side];
+						MatchType matchType = checkColumnMatch(columnMatches, side);
+						if (matchType != MatchType.NO_MATCH)
+							// this row matches other filters
+							for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
+								sideCounters[side][columnId][mIndex] += metricValues[mIndex];
+
+								if (side == 0 && matchType == MatchType.ALL_COLUMNS_MATCH) {
+									// in fact, the row matches all filters
+									// we are going to increase the total
+									// counters.
+									totalCounters[mIndex] += metricValues[mIndex];
+								}
+							}
+					}
 				}
-
-				for (int side = 0; side < this.fieldLookup.size(); side++) {
-					final int columnId = columnValues[side];
-					if (otherColumnsMatch(columnMatches, side))
-						for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-							sideCounters[side][columnId][mIndex] += metricValues[mIndex];
-						}
-				}
-
 			}
 			t3 = System.nanoTime();
-			// if (sideCounters.length > 0) {
-			for (int i = 0; i < sideCounters[0].length; i++)
-				for (int mIndex = 0; mIndex < metricNames.length; mIndex++)
-					totalCounters[mIndex] += sideCounters[0][i][mIndex];
-			// }
+
 		} catch (ColumnDoesNotExistException e) {
 			log.warn(e.getMessage());
 			return getEmptySearchResult();
 		}
 		final SearchResult result = convertToResult(sideCounters, totalCounters);
 		final long t1 = System.nanoTime();
-		 //log.debug("Got {} matches for the query in {}ms among {} rows",
-		 //matchCount, (t1 - t0) / 1000000.0, curSize);
+		// log.debug("Got {} matches for the query in {}ms among {} rows",
+		// matchCount, (t1 - t0) / 1000000.0, curSize);
 		if (curSize > 0 && (t3 - t2) > 0) {
 			int rowsPerSecond = (int) (1000000000l * curSize / (t3 - t2));
-			 //log.debug("Bruteforce search itself took {} ms", (t3 - t2) /
-			 //1000000.0);
-			 //log.debug("Bruteforce search is {} rows/second", rowsPerSecond);
+			// log.debug("Bruteforce search itself took {} ms", (t3 - t2) /
+			// 1000000.0);
+			// log.debug("Bruteforce search is {} rows/second", rowsPerSecond);
 		}
 		return result;
 
+	}
+
+	private MatchType checkColumnMatch(boolean[] matches, int side) {
+		MatchType currentMatch = MatchType.ALL_COLUMNS_MATCH;
+
+		for (int i = 0; i < matches.length; i++) {
+			if (!matches[i]) {
+				if (i == side)
+					currentMatch = MatchType.OTHER_COLUMNS_MATCH;
+				else {
+					return MatchType.NO_MATCH;
+				}
+			}
+		}
+		return currentMatch;
+	}
+
+	private boolean atLeastOneMatch(boolean[] matches) {
+		//boolean atLeastOneMatch = false;
+		for (int i = 0; i < matches.length; i++) {
+			if (matches[i]) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override
@@ -482,7 +481,7 @@ public class OffHeapPartition implements Partition {
 		long metricSize = this.metrics.values().stream().mapToLong(Metric::size).sum();
 		int columnBlocks = this.columns.values().stream().mapToInt(Column::getNumBuffers).sum();
 		int metricBLocks = this.metrics.values().stream().mapToInt(Metric::getNumBuffers).sum();
-		long lookupSize = (long)this.map.size() * this.columns.size() * Short.BYTES;
+		long lookupSize = (long) this.map.size() * this.columns.size() * Short.BYTES;
 		Map<String, Object> stats = new HashMap<String, Object>();
 		stats.put(Constants.STATS_COLUMN_SIZE, columnSize);
 		stats.put(Constants.STATS_METRIC_SIZE, metricSize);
@@ -493,9 +492,9 @@ public class OffHeapPartition implements Partition {
 		stats.put(Constants.STATS_LAST_RECORD_APPEND, this.lastAppendTs);
 		stats.put(Constants.STATS_NUM_RECORDS, this.size);
 		stats.put(Constants.STATS_NUM_COLUMNS, this.columns.size());
-		stats.put(Constants.STATS_NUM_LARGE_BLOCKS, 
-				this.metrics.values().stream().mapToInt(e -> e.isTiny()?0:1).sum() + 
-				this.columns.values().stream().mapToInt(e -> e.isTiny()?0:1).sum() );
+		stats.put(Constants.STATS_NUM_LARGE_BLOCKS,
+				this.metrics.values().stream().mapToInt(e -> e.isTiny() ? 0 : 1).sum()
+						+ this.columns.values().stream().mapToInt(e -> e.isTiny() ? 0 : 1).sum());
 		// stats.put(Constants.STATS_LAST_SAVE, this.lastInsertTs);
 		this.lookups.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().size()));
 		return stats;
@@ -528,40 +527,35 @@ public class OffHeapPartition implements Partition {
 		this.metrics = (Map<String, Metric>) kryo.readClassAndObject(input);
 		this.initializeMap();
 	}
-	
-	
 
-	protected Map<String, String> bytesToMap(byte[] in){
+	protected Map<String, String> bytesToMap(byte[] in) {
 		Map<String, String> out = new HashMap<String, String>();
 		ByteBuffer b = ByteBuffer.wrap(in);
-		for(int i=0; i<this.fieldLookup.size() ;i++)
-		{
+		for (int i = 0; i < this.fieldLookup.size(); i++) {
 			String fieldName = this.fieldLookup.getKey(i);
 			String fieldValue;
-			if(b.remaining()>0){
+			if (b.remaining() > 0) {
 				int fieldId = b.getShort();
 				fieldValue = this.lookups.get(fieldName).getKey(fieldId);
-				fieldValue = fieldValue.equals("null")?null:fieldValue;
-			}
-			else
+				fieldValue = fieldValue.equals("null") ? null : fieldValue;
+			} else
 				fieldValue = null;
 			out.put(fieldName, fieldValue);
-			
+
 		}
 		return out;
 	}
-	
-	protected Map<String, Long> metricsToMap(int offset){
+
+	protected Map<String, Long> metricsToMap(int offset) {
 		Map<String, Long> out = new HashMap<String, Long>();
-		for(int i=0; i<this.metricLookup.size();i++)
-		{
+		for (int i = 0; i < this.metricLookup.size(); i++) {
 			String metricName = this.metricLookup.getKey(i);
-			Long metricValue = this.metrics.get(metricName).get(offset); 
+			Long metricValue = this.metrics.get(metricName).get(offset);
 			out.put(metricName, metricValue);
 		}
 		return out;
 	}
-	
+
 	@Override
 	public Stream<DataRow> asDataRowStream() {
 		return this.map.entrySet().map(e -> {
