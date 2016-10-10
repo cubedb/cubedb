@@ -5,9 +5,15 @@ import java.util.Map;
 import javax.ws.rs.core.UriInfo;
 
 import org.cubedb.utils.CubeUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.owlike.genson.Genson;
 
 public class APIResponse<T> {
 
+	private static final Logger log = LoggerFactory.getLogger(APIResponse.class);
+	private static final Genson genson = new Genson();
 	public APIResponse() {
 
 	}
@@ -20,6 +26,7 @@ public class APIResponse<T> {
 	public APIResponse(T response, UriInfo info, long startTime) {
 		this.response = response;
 		this.header = new Header(startTime, info);
+		
 	}
 
 	public static class Header {
@@ -38,6 +45,7 @@ public class APIResponse<T> {
 			// There is a bug in Genson not allowing to serialize MultiValuedMaps
 			this.request = CubeUtils.multiValuedMapToMap(info.getQueryParameters());
 			this.params = CubeUtils.multiValuedMapToMap(info.getPathParameters());
+			log.info("{}ms\t{}\t{}\t{}", this.processingTimeMs, info.getAbsolutePath(), genson.serialize(this.request), genson.serialize(this.params));
 		}
 
 		public long requestTs;

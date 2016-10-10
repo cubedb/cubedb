@@ -5,23 +5,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import javax.ws.rs.core.MultivaluedMap;
 
-import org.cubedb.core.MultiCubeImpl;
-import org.cubedb.core.Partition;
 import org.cubedb.core.beans.SearchResultRow;
-import org.cubedb.core.lookups.HashMapLookup;
-import org.cubedb.core.lookups.Lookup;
-import org.cubedb.core.tiny.TinyColumn;
-import org.cubedb.core.tiny.TinyMetric;
-import org.cubedb.offheap.MultiBuffer;
-import org.cubedb.offheap.OffHeapColumn;
-import org.cubedb.offheap.OffHeapMetric;
-import org.cubedb.offheap.OffHeapPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,7 +76,7 @@ public class CubeUtils {
 		.collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().toArray(new String[0])));
 	}
 	public static Kryo getKryoWithRegistrations(){
-		int ref = 0;
+		//int ref = 0;
 		Kryo kryo = new Kryo();
 		kryo.setRegistrationRequired(false);
 		/*kryo.register(MultiCubeImpl.class, ref++);

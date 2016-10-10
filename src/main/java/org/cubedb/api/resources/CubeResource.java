@@ -1,7 +1,6 @@
 package org.cubedb.api.resources;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -15,13 +14,10 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.GenericEntity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.UriInfo;
 
 import org.cubedb.api.utils.APIResponse;
 import org.cubedb.core.MultiCube;
@@ -31,8 +27,6 @@ import org.cubedb.core.beans.SearchResultRow;
 import org.cubedb.utils.CubeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.ws.rs.core.UriInfo;
 
 import jersey.repackaged.com.google.common.collect.ImmutableMap;
 

@@ -1,13 +1,6 @@
 package org.cubedb.offheap;
 
-import java.nio.ByteBuffer;
-
 import org.cubedb.core.Column;
-
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.KryoSerializable;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
 
 public class OffHeapColumn extends MultiBuffer implements Column{
 

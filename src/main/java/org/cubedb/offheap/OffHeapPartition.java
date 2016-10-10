@@ -1,10 +1,6 @@
 package org.cubedb.offheap;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -31,7 +27,6 @@ import org.cubedb.core.tiny.TinyMetric;
 import org.cubedb.core.tiny.TinyUtils;
 import org.cubedb.offheap.matchers.IdMatcher;
 import org.cubedb.utils.CubeUtils;
-import org.cubedb.utils.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

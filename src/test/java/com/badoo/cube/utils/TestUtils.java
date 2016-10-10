@@ -1,5 +1,8 @@
 package com.badoo.cube.utils;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -12,7 +15,6 @@ import java.util.List;
 import java.util.LongSummaryStatistics;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.stream.Collectors;
@@ -24,7 +26,6 @@ import org.cubedb.core.Cube;
 import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
-import org.cubedb.core.beans.SearchResult;
 import org.cubedb.core.beans.SearchResultRow;
 import org.cubedb.offheap.OffHeapPartition;
 import org.slf4j.Logger;
@@ -34,9 +35,6 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
 import com.owlike.genson.GenericType;
 import com.owlike.genson.Genson;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class TestUtils {
 

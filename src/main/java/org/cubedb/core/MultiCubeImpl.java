@@ -102,7 +102,7 @@ public class MultiCubeImpl implements MultiCube {
 			for (Entry<String, Cube> e : this.cubes.entrySet()) {
 				String saveFileName = destination.getAbsolutePath() + "/" + e.getKey() + ".gz";
 				try {
-					if(asJson)
+					if(!asJson)
 						e.getValue().save(saveFileName);
 					else
 						e.getValue().saveAsJson(saveFileName, e.getKey());

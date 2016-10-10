@@ -1,6 +1,6 @@
 package com.badoo.cube.core;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -8,12 +8,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
 import org.cubedb.core.Cube;
 import org.cubedb.core.CubeImpl;
-import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.SearchResultRow;

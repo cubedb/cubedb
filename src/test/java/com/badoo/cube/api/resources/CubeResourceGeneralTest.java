@@ -1,6 +1,6 @@
 package com.badoo.cube.api.resources;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNull;
 
 import java.net.URI;
 import java.util.List;

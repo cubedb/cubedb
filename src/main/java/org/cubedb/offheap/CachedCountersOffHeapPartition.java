@@ -41,6 +41,7 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 	}
 
 	protected synchronized void initializeCounters() {
+		log.info("Initializing counters");
 		SearchResult r = super.get(new ArrayList<Filter>());
 		this.counters = new HashMap<String, Map<String, Map<String, MutableLong>>>();
 		this.totalCounters = new HashMap<String, MutableLong>();
