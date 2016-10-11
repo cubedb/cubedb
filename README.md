@@ -18,7 +18,7 @@ CubeDB is a database that stores data in the following structure :
 - Dimension fields can be null. If you don't specify all of them when inserting a row, 
 - Metric fields cannot be null, their default value is 0
 
-### Querying data in a pivot way
+### Querying the data
 Given you have the following:
 - fields to group by: G1, G2, ... Gn 
 - filtering criterias DQ1, DQ2, .... DQn, each of which are a list of possible values
@@ -26,7 +26,7 @@ Given you have the following:
 
 You can get the results of the following query:
 
-```
+```sql
 select
 'G1' as name,
 G1,
@@ -73,12 +73,11 @@ D1 in (DQ1) ... and Dn in (DQn) ...
 group by 'name', p
 
 ```
-To put it in simple ways, if you have an N-dimension cube of data, the query gives you the SUMS of each edge.
+To put it in simple terms, this query gives you the SUMS of each edge of an N-dimensinal datacube.
 
 In the future, I plan to add the support of the following query:
-You can get the results for the following query:
 
-```
+```sql
 select 
 G1, G2, ... Gn, 
 SUM(M1), SUM(M2), ... SUM(Mn)
@@ -101,7 +100,7 @@ of your partition and remove the old days.
 but scales to tenths of millions aggregates, this is for you.**
 
 
-### Part 1. Crossfilter
+### Crossfilter
 
 This is Crossfilter:
 !(https://hsto.org/storage2/333/9d1/00a/3339d100a738e6c99fff19d89d31dbb1.png)
@@ -117,7 +116,7 @@ There is a beautiful visualisation library built on top of it, have a look, it i
 In fact, if your aggregate count would never exceed a few hundreds of thousands of rows, you probably
 just should stop here, read no further and enjoy dc.
 
-### Part 2. Never say never
+### Never say never
 
 Imagine this hipothetical situation where you adopt a Crossfilter based solution in your org and it 
 suddenly picks up. Actually, it is not that hypothetical - this happened every time so far in my
@@ -136,9 +135,12 @@ First of all, retrieving a couple of million records takes time. Processing thos
 browser unresponsive. If you are using json to load data, you might easily hit [the hardcoded limit of 
 a maximum json](https://github.com/nodejs/node/blob/64beab0fc55f750bae648e9b69e027f2dbf3b18a/deps/v8/include/v8.h#L2083)
  string that can be deserialized in V8. You can handle these cases with pagination, but 
-believe me, there is a good reason, why it is set so.  
+believe me, there is a good reason, why it is set so.  Browsers struggle to process more.
 
 Second, you most probably will run out of 8, 16 dimensions, and you might even exceed the hard limit of 32 
 dimensions supported by Crossfilter.
 
+Third, you probably will have to start managing the csv/json fileds containing the data
 All this will quickly become a major point of pain.
+
+### 
