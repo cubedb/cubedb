@@ -6,7 +6,7 @@ A simple, stupid and fast in-memory multi-key counter store.
 
 ### Data Structure
 CubeDB is a database that stores data in the following structure :  
-- table T, 
+- table T, (also referred here as *cube*)
 - string field 'p' (partition field)
 - string fields D1, D2, ... Dn. (dimension fields).
 - 64 bit integer fields M1, M2, .... Mn (metric fields)
@@ -15,8 +15,8 @@ CubeDB is a database that stores data in the following structure :
 - You don't need to define the structure of tables prior to using it. Just insert a row into a table, and if the table did not exist, it will be created. 
 - Same refers to fields. They will be created, if don't exist.
 - Only partition field is mandatory. It's name is hardcoded, and it is 'p'
-- Dimension fields can be null. If you don't specify all of them when inserting a row, 
-- Metric fields cannot be null, their default value is 0
+- Dimension fields can be null. If you don't specify all of them when inserting a row, they will be added as 'null'
+- Metric fields default values is 0
 
 ### Querying the data
 Given you have the following:
@@ -157,3 +157,91 @@ and every time you click on a filter, the request is sent to the server side, pr
 
 Because of this architecture, it is quite hard to achieve 30ms reaction speed, 
 however, with powerful servers and fast networks still allow you to achieve speeds <100ms even for larger datasets.
+
+## API
+
+Currently CubeDB is operated via REST interface, 
+although it is possible to implement something quicker, once it becomes a problem.
+
+CubeDB supports gzipped requests and responses. 
+
+### Inserting data
+
+Data is inserted via HTTP POST:
+
+```
+echo $data | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://127.0.0.1:9998/v1/insert
+```
+
+$data itself is a json array of rows with metrics
+```json
+
+```
+
+In first instance rows are augmented with fields not specified and inserted. If this row already 
+exists in the DB, counters are incremented by the values specified. So, technically speaking this is 
+an **upsert** rather then *insert*.
+
+### Querying data
+
+   curl -s --request DELETE --header 'Content-Type: application/json' http://127.0.0.1:9998/v1/all/from/{fromPartition}/to/{toPartition}
+
+### Deleting data
+
+Deleting happens via DELETE HTTP method. You can only remove enitre partitions or ranges of partitions.
+
+   curl -s --request DELETE --header 'Content-Type: application/json' http://127.0.0.1:9998/v1/all/from/{fromPartition}/to/{toPartition}
+
+- /v1/keep/last/{numPartitions} would delete all but the last *numPartitions*
+- /v1/{cubeName} would delete (drop) table {cubeName}
+- /v1/all/from/{fromPartition}/to/{toPartition} deletes all partitions ranging in [fromPartition, toPartition] inclusively
+- /v1/{cubeName}/from/{fromPartition}/to/{toPartition} deletes all partitions ranging in [fromPartition, toPartition] inclusively within a table
+
+### Statistics and monitoring
+
+```http://127.0.0.1:9998/v1/stats``` will give you all sorts of technical information,
+including the list of all tables and number of partitions for each of them and in total.
+It will also tell you the approximate size occupied by data., number of partitions that can be found 
+in heap and off-heap (see next chapter for explanations).
+
+### Saving and backup
+
+Please bear in mind that data is not saved automatically on shutdown. YOu have to trigger saving manually.
+On startup, the data is loaded from the directory specified in the command line argument.
+
+POST-ing to ```http://127.0.0.1:9998/v1/save``` will trigger a database dump to disk. 
+
+- each table is serialized into a separate file.
+- files are gzipped
+- save directory is specified on server startup as command line argument
+- HTTP response of the this request will give you the full path where the dump is saved.
+- data is serialized in it's internal, hoighly efficient binary format.
+- **WARNING** dumps are meant just to survive the restarts and it is not guaranteed that they will be compatible withe the new versions of cubeDB.
+
+POST-ing to ```http://127.0.0.1:9998/v1/saveJSON``` will dump whole database in human readible format.
+
+- each table is serialized into a separate file.
+- files are gzipped
+- save directory is a subdirectory specified on server startup as command line argument
+- HTTP response of the this request will give you the full path where the dump is saved.
+- data is serialized in human readible, one-json-per-line format
+- it should be compatible with newer versions of CubeDB.
+
+
+
+## Technical details
+
+- current version of CubeDB is implemented in Java 8. You need to have it installed in order to process it.
+- when querying the data, all CPU's are utilized in parallel
+- a full scan of records is done for every query
+- current scan performance is around 20 million records/CPU/second
+- data is stored in columnar manner + a hashmap is used for record lookup (to check if the records is already is done)
+- if the table is small (<4096 records), a column is stored in a Trove short array, metric is stored in a Trove long array
+- columns exceeding 4096 records are stored off heap, using ByteBuffer.allocateDirect()
+- Garbage collection is explicitely called after partitions are deleted. Garbage collection time is specified 
+
+** PRO TIP: *** if you are running this on SUN JDK, you can also use Java Mission Control to have some deep 
+introspection into what is exactly happenning in the 
+
+## Limitations
+
