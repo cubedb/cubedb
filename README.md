@@ -94,16 +94,17 @@ Which is a simple pivot.
 You can delete the data only by partitions. In practical terms, you usually specify day or hour as the value
 of your partition and remove the old days. 
 
-## Explanation through Croffilter
+## Explanation through Crossfilter
 
+Just because the previous chapter could have scared you off, here is an alternative, more visual explanation.
 **TL;DR: if you have outgrown Crossfilter and need something that behaves like it, 
 but scales to tenths of millions aggregates, this is for you.**
 
 
 ### Crossfilter
 
-This is Crossfilter:
-!(https://hsto.org/storage2/333/9d1/00a/3339d100a738e6c99fff19d89d31dbb1.png)
+This is [Crossfilter](square.github.io/crossfilter/):
+![Crossfilter](https://hsto.org/storage2/333/9d1/00a/3339d100a738e6c99fff19d89d31dbb1.png)
 
 
 It is an incredibely usefull small library and probably one of the best ways of digging into simple
@@ -111,10 +112,11 @@ data invented so far.
 I believe that every organisation that requires at least some amount of data analysis would benefit
 from it. And therefore, it is an obligation for every data techie to somehow demonstrate it to colleagues.
 
-There is a beautiful visualisation library built on top of it, have a look, it is called [dc.js](https://dc-js.github.io/dc.js/).
+There is a beautiful visualisation library built on top of it, have a look, it is called 
+[dc.js](https://dc-js.github.io/dc.js/).
 
-In fact, if your aggregate count would never exceed a few hundreds of thousands of rows, you probably
-just should stop here, read no further and enjoy dc.
+In fact, if your aggregate count will never exceed a million of rows, you probably
+just should stop here, read no further and enjoy the simplicity of the current client-side solution.
 
 ### Never say never
 
@@ -140,7 +142,16 @@ believe me, there is a good reason, why it is set so.  Browsers struggle to proc
 Second, you most probably will run out of 8, 16 dimensions, and you might even exceed the hard limit of 32 
 dimensions supported by Crossfilter.
 
-Third, you probably will have to start managing the csv/json fileds containing the data
-All this will quickly become a major point of pain.
+Third, you probably will have to start managing the csv/json fileds containing the data. 
+Adding/removing fields and old data has to be managed somehow, and the larger is the dataset, the more effort
+it takes to do so.
 
-### 
+All this will quickly become a major point of pain. This is why this project has been created.
+
+### CubeDB
+
+This project is a server-side simulation of Crossfilter. Only the final aggregates are downloaded to the client, 
+and every time you click on a filter, the request is sent to the server side, processed, and new results are retrieved.
+
+Because of this architecture, it is quite hard to achieve 30ms reaction speed, 
+however, with powerful servers and fast networks still allow you to achieve speeds <100ms even for larger datasets.
