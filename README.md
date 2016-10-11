@@ -63,6 +63,8 @@ D1 in (DQ1) ... and D(N-1) in (DQ(N-1)) ...  -- skip all filters related to GN
 and p between PFrom and PTo
 group by name, GN
 
+UNION ALL
+
 select
 'p' as name,
 p,
