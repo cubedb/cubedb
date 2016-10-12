@@ -169,9 +169,7 @@ CubeDB supports gzipped requests and responses.
 
 Data is inserted via HTTP POST:
 
-```
-echo $data | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://127.0.0.1:9998/v1/insert
-```
+```echo $data | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://127.0.0.1:9998/v1/insert```
 
 $data itself is a json array of rows with metrics
 ```json
@@ -184,18 +182,18 @@ an **upsert** rather then *insert*.
 
 ### Querying data
 
-   curl -s --request DELETE --header 'Content-Type: application/json' http://127.0.0.1:9998/v1/all/from/{fromPartition}/to/{toPartition}
+```curl -s --request DELETE --header 'Content-Type: application/json' http://127.0.0.1:9998/v1/all/from/{fromPartition}/to/{toPartition}```
 
 ### Deleting data
 
 Deleting happens via DELETE HTTP method. You can only remove enitre partitions or ranges of partitions.
 
-   curl -s --request DELETE --header 'Content-Type: application/json' http://127.0.0.1:9998/v1/all/from/{fromPartition}/to/{toPartition}
+```curl -s --request DELETE --header 'Content-Type: application/json' http://127.0.0.1:9998/v1/all/from/{fromPartition}/to/{toPartition}```
 
-- /v1/keep/last/{numPartitions} would delete all but the last *numPartitions*
-- /v1/{cubeName} would delete (drop) table {cubeName}
-- /v1/all/from/{fromPartition}/to/{toPartition} deletes all partitions ranging in [fromPartition, toPartition] inclusively
-- /v1/{cubeName}/from/{fromPartition}/to/{toPartition} deletes all partitions ranging in [fromPartition, toPartition] inclusively within a table
+- ```/v1/keep/last/{numPartitions}``` would delete all but the last *numPartitions*
+- ```/v1/{cubeName}``` would delete (drop) table {cubeName}
+- ```/v1/all/from/{fromPartition}/to/{toPartition}``` deletes all partitions ranging in [fromPartition, toPartition] inclusively
+- ```/v1/{cubeName}/from/{fromPartition}/to/{toPartition}``` deletes all partitions ranging in [fromPartition, toPartition] inclusively within a table
 
 ### Statistics and monitoring
 
