@@ -99,8 +99,10 @@ of your partition and remove the old days.
 ## Explanation through Crossfilter
 
 Just because the previous chapter could have scared you off, here is an alternative, more visual explanation.
-**TL;DR: if you have outgrown Crossfilter and need something that behaves like it, 
-but scales to tenths of millions aggregates, this is for you.**
+
+
+**TL;DR: ** if you have outgrown Crossfilter and need something that behaves like it, 
+but scales to tenths of millions aggregates, this is for you.
 
 
 ### Crossfilter
@@ -225,7 +227,41 @@ POST-ing to ```http://127.0.0.1:9998/v1/saveJSON``` will dump whole database in 
 - data is serialized in human readible, one-json-per-line format
 - it should be compatible with newer versions of CubeDB.
 
+## Installing and compiling
 
+
+### Installation
+
+**Requirements:** you need git, jdk 8 and maven to be installed on your system
+
+```
+git clone git@github.com:sztanko/cubedb.git 
+cd cubedb/
+mvn package -DskipTests 
+mv target/cubedb-0.0.1-SNAPSHOT.jar cubedb.jar
+```
+
+### Running
+
+```
+java -XX:MaxDirectMemorySize=10G -Xmx2000M -jar cubedb.jar <port> <path_for_dumps>
+```
+
+I recommend creating a run.sh file that would run it for you.
+
+```shell
+path="/tmp/cubedumps" # Directory for dumps
+log_properties="log4j.properties" # Create your own log4.properties
+port=9998 # port
+jmx_port=5010 # monitoring port
+flightRecordsOpts="-XX:+UnlockCommercialFeatures -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=$jmx_port"
+logOpts="-Dlog4j.configuration=$log_properties"
+/usr/java/jdk1.8.0_60/bin/java -XX:MaxDirectMemorySize=10G -Xmx2000M $flightRecordsOpts $logOpts -jar cubedb.jar $port $path
+```
+
+### Stopping the server
+
+Just ctrl-C the task and wait a little bit. It is advised to save the data before the shutdown.
 
 ## Technical details
 
@@ -243,3 +279,12 @@ introspection into what is exactly happenning in the
 
 ## Limitations
 
+- dictionary compression is used for efficient storing of field names. The max cardinality of a field within one partition is 32677 thus. 
+- number of fields within one partition is limited to 256
+- all data should fit into a memory, thus limiting number of aggregates to a billion
+- *theoretically* the engine is capable of inserting 150 000 records / seconds in worst case scenario (no updates, inserts only), however the current bottleneck is HTTP interface and json deserialization cost anyway.  
+
+
+## Known bugs
+
+- In some rare edge cases, CubeDB gives an 0 count of "null" value for a field for partitions which where created before this field.   
