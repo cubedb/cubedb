@@ -20,4 +20,5 @@ public interface Partition extends KryoSerializable{
 	int getNumRecords();
 	Map<String, Object> getStats();
 	Stream<DataRow> asDataRowStream();
+	boolean optimize();
 }

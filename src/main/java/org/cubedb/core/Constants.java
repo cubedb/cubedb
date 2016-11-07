@@ -25,5 +25,8 @@ public class Constants {
 	public static final String STATS_CARDINALITIES = "columnCardinalities";
 	public static final String STATS_NUM_CUBES = "numCubes";
 	public static final String STATS_NUM_LARGE_BLOCKS = "numLargeBlocks";
+	public static final String STATS_IS_READONLY_PARTITION = "isReadOnly";
+	public static final String STATS_NUM_READONLY_PARTITIONS = "numReadOnlyPartitions";
+	public static final long KEY_MAP_TTL = 7 * 24 * 3600 * 1000; // 7 days
 	
 }

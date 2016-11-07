@@ -10,10 +10,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.cubedb.api.KeyMap;
 import org.cubedb.core.Column;
 import org.cubedb.core.ColumnDoesNotExistException;
 import org.cubedb.core.Constants;
+import org.cubedb.core.KeyMap;
 import org.cubedb.core.Metric;
 import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
@@ -73,7 +73,6 @@ public class OffHeapPartition implements Partition {
 
 	protected void createMap(int fieldsLength) {
 		// this.map = new MapDBKeyMap(size, fieldsLength);
-		this.map = new DummyKeyMap(size, fieldsLength);
 		this.map = new BOHKeyMap(size, fieldsLength);
 	}
 
@@ -117,6 +116,15 @@ public class OffHeapPartition implements Partition {
 		// System.gc();
 	}
 
+	public boolean optimize() {
+		long ts = System.currentTimeMillis();
+		if (ts - this.lastInsertTs < Constants.KEY_MAP_TTL) {
+			this.map = null;
+			return true;
+		}
+		return false;
+	}
+
 	// TODO: refactor to accept int[], long[]
 	protected void insertFields(short[] fields, Map<String, Long> metrics) {
 		ByteBuffer buf = ByteBuffer.allocate(fields.length * Integer.BYTES);
@@ -124,6 +132,9 @@ public class OffHeapPartition implements Partition {
 		for (short f : CubeUtils.cutZeroSuffix(fields))
 			buf.putShort(f);
 		byte[] bytes = buf.array();
+		if (this.map == null) {
+			this.initializeMap();
+		}
 		Integer index = this.map.get(bytes);
 
 		// 1. Check if there are any new metrics
@@ -187,8 +198,6 @@ public class OffHeapPartition implements Partition {
 			if (row.getFields().containsKey(f))
 				newFields.remove(f);
 
-		// log.info("The following new fields where detected: {}",
-		// newFields.toString());
 		if (newFields.size() > 0) {
 			for (String f : newFields) {
 				final int newColumnIndex = this.fieldLookup.getValue(f);
@@ -196,8 +205,6 @@ public class OffHeapPartition implements Partition {
 				// log.debug("Index for {} is {}", f, newColumnIndex);
 				this.columns.put(f, new TinyColumn(this.size));
 			}
-			// initializeMap(row.getCounters().keySet());
-			// log.info("Re-inserting {}", row.getFields());
 			this._insert(row);
 		}
 	}
@@ -456,7 +463,7 @@ public class OffHeapPartition implements Partition {
 	}
 
 	private boolean atLeastOneMatch(boolean[] matches) {
-		//boolean atLeastOneMatch = false;
+		// boolean atLeastOneMatch = false;
 		for (int i = 0; i < matches.length; i++) {
 			if (matches[i]) {
 				return true;
@@ -490,6 +497,7 @@ public class OffHeapPartition implements Partition {
 		stats.put(Constants.STATS_NUM_LARGE_BLOCKS,
 				this.metrics.values().stream().mapToInt(e -> e.isTiny() ? 0 : 1).sum()
 						+ this.columns.values().stream().mapToInt(e -> e.isTiny() ? 0 : 1).sum());
+		stats.put(Constants.STATS_IS_READONLY_PARTITION, this.map == null);
 		// stats.put(Constants.STATS_LAST_SAVE, this.lastInsertTs);
 		this.lookups.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().size()));
 		return stats;
@@ -508,7 +516,7 @@ public class OffHeapPartition implements Partition {
 		kryo.writeClassAndObject(output, this.columns);
 		// add metrics
 		kryo.writeClassAndObject(output, this.metrics);
-
+		this.lastSaveTs = System.currentTimeMillis();
 	}
 
 	@SuppressWarnings("unchecked")

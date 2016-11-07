@@ -282,6 +282,7 @@ public class CubeImpl implements Cube {
 		out.put(Constants.STATS_NUM_RECORDS, partitionStats.values().stream().mapToInt(e -> (Integer)e.get(Constants.STATS_NUM_RECORDS)).sum());
 		out.put(Constants.STATS_NUM_LARGE_BLOCKS, partitionStats.values().stream().mapToInt(e -> (Integer)e.get(Constants.STATS_NUM_LARGE_BLOCKS)).sum());
 		out.put(Constants.STATS_NUM_PARTITIONS, partitionStats.size());
+		out.put(Constants.STATS_NUM_READONLY_PARTITIONS, partitionStats.values().stream().mapToInt(e -> (Integer)e.get(Constants.STATS_IS_READONLY_PARTITION)).sum());
 		return out;
 	}
 	

@@ -4,8 +4,8 @@ import java.nio.ByteBuffer;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 
-import org.cubedb.api.KeyMap;
 import org.cubedb.core.Constants;
+import org.cubedb.core.KeyMap;
 import org.cubedb.core.beans.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

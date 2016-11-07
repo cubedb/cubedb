@@ -275,6 +275,8 @@ public class MultiCubeImpl implements MultiCube {
 				partitionStats.values().stream().mapToInt(e -> (Integer) e.get(Constants.STATS_NUM_PARTITIONS)).sum());
 		out.put(Constants.STATS_NUM_LARGE_BLOCKS, partitionStats.values().stream()
 				.mapToInt(e -> (Integer) e.get(Constants.STATS_NUM_LARGE_BLOCKS)).sum());
+		out.put(Constants.STATS_NUM_READONLY_PARTITIONS, partitionStats.values().stream()
+				.mapToInt(e -> (Integer) e.get(Constants.STATS_NUM_READONLY_PARTITIONS)).sum());
 		out.put(Constants.STATS_NUM_CUBES, partitionStats.size());
 		return out;
 	}

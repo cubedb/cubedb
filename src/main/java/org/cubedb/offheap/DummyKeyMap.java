@@ -3,7 +3,7 @@ package org.cubedb.offheap;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 
-import org.cubedb.api.KeyMap;
+import org.cubedb.core.KeyMap;
 
 
 
