@@ -213,26 +213,6 @@ $data itself is a json array of rows with metrics
         "partition": "2016-06-27"
     },
     {
-[
-    {
-        "counters": {
-            "c": 20
-        },
-        "cubeName": "event_cube_109_day",
-        "fields": {
-            "app_version": "4.27.0",
-            "auto_topup": 3,
-            "brand": 2,
-            "gender": 0,
-            "has_spp": true,
-            "is_default_product": true,
-            "is_default_provider": true,
-            "is_stored_method": true,
-            "platform": 1
-        },
-        "partition": "2016-06-27"
-    },
-    {
         "counters": {
             "c": 1
         },
@@ -249,20 +229,6 @@ $data itself is a json array of rows with metrics
             "platform": 3
         },
         "partition": "2016-06-27"
-    },
-    {
-        },
-        "cubeName": "event_cube_100_hour",
-        "fields": {
-            "activation_place": null,
-            "app_version": "4.38.2",
-            "brand": 2,
-            "gender": 2,
-            "gift_button": 1,
-            "message_first": false,
-            "platform": 3
-        },
-        "partition": "2016-06-27 00"
     },
     {
         "counters": {
