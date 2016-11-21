@@ -31,5 +31,6 @@ public interface MultiCube {
 	Map<String, Object> getStats();
 	
 	public void saveAsJson(String path);
+	public int optimize();
 	
 }

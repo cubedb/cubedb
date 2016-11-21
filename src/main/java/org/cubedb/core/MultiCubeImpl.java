@@ -123,7 +123,6 @@ public class MultiCubeImpl implements MultiCube {
 			// TODO Auto-generated catch block
 			e2.printStackTrace();
 		}
-		
 		lastSaveTsMs = System.currentTimeMillis();
 		this.isCurrentlySavingOrLoading = false;
 	}
@@ -281,6 +280,9 @@ public class MultiCubeImpl implements MultiCube {
 		return out;
 	}
 	
+	public int optimize(){
+		return this.cubes.values().stream().mapToInt(Cube::optimize).sum();
+	}
 	@Override
 	public void saveAsJson(String path)
 	{

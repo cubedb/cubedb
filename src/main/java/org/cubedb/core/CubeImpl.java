@@ -68,6 +68,11 @@ public class CubeImpl implements Cube {
 		}
 	}
 
+	@Override
+	public int optimize()
+	{
+		return this.partitions.values().stream().mapToInt( p -> p.optimize()?1:0).sum();
+	}
 	protected class Insertor implements Runnable {
 		final private List<String> partitions;
 		final private Map<String, List<DataRow>> groupedData;

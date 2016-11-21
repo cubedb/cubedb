@@ -1,7 +1,6 @@
 package com.badoo.cube.offheap;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -14,6 +13,7 @@ import java.util.Map.Entry;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import org.cubedb.core.Constants;
 import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
@@ -44,6 +44,32 @@ public class OffHeapPartitionTest {
 		assertEquals(p.getNumRecords(), 10);
 	}
 
+	@Test
+	public void testInsertDataWithExpiredIndex() throws NoSuchFieldException, SecurityException, Exception {
+		// Constants.KEY_MAP_TTL
+		long oldTtl = Constants.KEY_MAP_TTL;
+		long newTtl = 10l;
+		int numRecords = 10;
+		Constants.KEY_MAP_TTL = newTtl;
+		//TestUtils.setFinalStatic(Constants.class.getField("KEY_MAP_TTL"), newTtl);
+		Thread.sleep(newTtl + 1l);
+		log.info("Value of KEY_MAP_TTL is now {}", Constants.KEY_MAP_TTL);
+		assertEquals(newTtl, Constants.KEY_MAP_TTL);
+		OffHeapPartition p = createPartition();
+		p.insertData(TestUtils.genSimpleData("f1", "c", numRecords));
+		assertEquals(p.getNumRecords(), numRecords);
+		boolean hasOptimizationHappened = p.optimize();
+		assertFalse(hasOptimizationHappened);
+		Thread.sleep(newTtl + 1l);
+		hasOptimizationHappened = p.optimize();
+		assertTrue(hasOptimizationHappened);
+		assertEquals(p.getNumRecords(), numRecords);
+		p.insertData(TestUtils.genSimpleData("f1", "c", numRecords));
+		assertEquals(p.getNumRecords(), numRecords);
+		//TestUtils.setFinalStatic(Constants.class.getField("KEY_MAP_TTL"), oldTtl);
+		Constants.KEY_MAP_TTL = oldTtl;
+	}
+	
 	@Test
 	public void testInsertRepetableDataLarge() {
 		OffHeapPartition p = createPartition();

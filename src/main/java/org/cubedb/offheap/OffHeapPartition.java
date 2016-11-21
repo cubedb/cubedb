@@ -56,7 +56,7 @@ public class OffHeapPartition implements Partition {
 		this.columns = new HashMap<String, Column>(5);
 		this.metrics = new HashMap<String, Metric>(1);
 		this.metricLookup = new HashMapLookup(false);
-		this.createMap(1);
+		// this.createMap(1);
 
 	}
 
@@ -77,7 +77,7 @@ public class OffHeapPartition implements Partition {
 	}
 
 	protected void initializeMap() {
-		// log.info("Re-Initializing map");
+		log.debug("Re-Initializing map");
 		long t0 = System.currentTimeMillis();
 		final Column[] fields = new Column[fieldLookup.getKeys().length];
 		Metric[] metrics = new Metric[this.metrics.size()];
@@ -116,9 +116,10 @@ public class OffHeapPartition implements Partition {
 		// System.gc();
 	}
 
+	@Override
 	public boolean optimize() {
 		long ts = System.currentTimeMillis();
-		if (ts - this.lastInsertTs < Constants.KEY_MAP_TTL) {
+		if (ts - this.lastInsertTs > Constants.KEY_MAP_TTL) {
 			this.map = null;
 			return true;
 		}
@@ -127,7 +128,7 @@ public class OffHeapPartition implements Partition {
 
 	// TODO: refactor to accept int[], long[]
 	protected void insertFields(short[] fields, Map<String, Long> metrics) {
-		ByteBuffer buf = ByteBuffer.allocate(fields.length * Integer.BYTES);
+		ByteBuffer buf = ByteBuffer.allocate(fields.length * Short.BYTES);
 		buf.clear();
 		for (short f : CubeUtils.cutZeroSuffix(fields))
 			buf.putShort(f);
@@ -356,8 +357,9 @@ public class OffHeapPartition implements Partition {
 	@Override
 	public SearchResult get(List<Filter> filters) {
 		// log.debug("Starting search");
-		long t0 = System.nanoTime();
-		int curSize = size;
+		long t0 = System.nanoTime(); // debug purposes
+		int curSize = size; // current max index of rows in the db
+
 		// creating an empty result set, with id's
 		final String[] metricNames = this.metricLookup.getKeys();
 		final long[] totalCounters = new long[metricNames.length];
@@ -366,15 +368,44 @@ public class OffHeapPartition implements Partition {
 		final long[][][] sideCounters = initSideCounters();
 		final Column[] columns = getColumnsAsArray();
 
-		int matchCount = 0;
-		final long t2, t3;
+		int matchCount = 0; // Debug variable
+		final long t2, t3; // these ones are for time measurement (debug
+							// purposes only)
 		// creating a map of matchers based on filter
+
+		/*
+		 * These fields are mostly primitive array representations of what
+		 * previously was stored in Objects and HashMaps
+		 */
+
+		/*
+		 * bitmask for filter matches
+		 */
 		final boolean[] columnMatches = new boolean[this.fieldLookup.size()];
-		final long metricValues[] = new long[metricNames.length];
+
+		/*
+		 * values of measures
+		 */
+		final long metricValues[] = new long[metricNames.length]; //
+
+		/*
+		 * values of columns. Id's only, no real string values.
+		 */
 		final int columnValues[] = new int[this.fieldLookup.size()];
+
+		/*
+		 * Fast representation of filters. IdMatcher means we are doing only
+		 * equality checking, no fancy >, <, !=, etc.
+		 */
 		final IdMatcher[] matchersArray = new IdMatcher[this.fieldLookup.size()];
 		final Metric[] metricsArray = new Metric[this.metricLookup.size()];
 		try {
+
+			/*
+			 * Filters are specification of criterias using strings. Here they
+			 * are transformed to an efficient representation, functions that
+			 * match using integer ids
+			 */
 			final Map<String, IdMatcher> matchers = transformFiltersToMatchers(filters);
 
 			for (Entry<String, IdMatcher> e : matchers.entrySet()) {
@@ -382,16 +413,27 @@ public class OffHeapPartition implements Partition {
 				matchersArray[field_id] = e.getValue();
 			}
 
+			/*
+			 * Here we get transform Map of metrics to an array of metrics. Note
+			 * that in 99% of cases there is only one metric
+			 */
 			for (Entry<String, Metric> e : metrics.entrySet()) {
 				int field_id = this.metricLookup.getValue(e.getKey());
 				metricsArray[field_id] = e.getValue();
 			}
 
-			// matching itself
+			/*
+			 * Here starts the brute-force scanning. Operations in this block
+			 * have to be as fast as possible
+			 */
+
 			t2 = System.nanoTime();
 			for (int i = 0; i < curSize; i++) {
-				// boolean rowMatches = true;
 
+				/*
+				 * Here we do not retrieve values of all columns. We only get
+				 * those which are related to a filter/matcher
+				 */
 				for (int matcherId = 0; matcherId < matchersArray.length; matcherId++) {
 					IdMatcher matcher = matchersArray[matcherId];
 					columnMatches[matcherId] = true;
@@ -401,29 +443,42 @@ public class OffHeapPartition implements Partition {
 						columnMatches[matcherId] = matcher.match(valueId);
 					}
 				}
+
+				/*
+				 * At least one of the filters was matched. We need this row
+				 */
 				if (atLeastOneMatch(columnMatches)) {
-					// We have a match!
-					// First, we retrieve the counters
+					/*
+					 * We have a match! First, we retrieve the counters values
+					 * for this row
+					 */
 					for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
 						final long c = metricsArray[mIndex].get(i);
 						metricValues[mIndex] = c;
 					}
 
+					/*
+					 * Second, we retrieve the values of all columns. 
+					 * For each side, we increment the side counter. 
+					 * Third, we
+					 */
 					for (int side = 0; side < this.fieldLookup.size(); side++) {
 						final int columnId = columnValues[side];
 						MatchType matchType = checkColumnMatch(columnMatches, side);
-						if (matchType != MatchType.NO_MATCH)
+						if (matchType != MatchType.NO_MATCH) {
 							// this row matches other filters
 							for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
 								sideCounters[side][columnId][mIndex] += metricValues[mIndex];
 
 								if (side == 0 && matchType == MatchType.ALL_COLUMNS_MATCH) {
-									// in fact, the row matches all filters
-									// we are going to increase the total
-									// counters.
+									/*
+									 * In fact, the row matches all filters. 
+									 * We are going to increase the total counters.
+									 */
 									totalCounters[mIndex] += metricValues[mIndex];
 								}
 							}
+						}
 					}
 				}
 			}
@@ -462,6 +517,7 @@ public class OffHeapPartition implements Partition {
 		return currentMatch;
 	}
 
+	// TODO: maybe rewrite to a bitwise op
 	private boolean atLeastOneMatch(boolean[] matches) {
 		// boolean atLeastOneMatch = false;
 		for (int i = 0; i < matches.length; i++) {

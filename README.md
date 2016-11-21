@@ -175,7 +175,128 @@ Data is inserted via HTTP POST:
 
 $data itself is a json array of rows with metrics
 ```json
-
+[
+    {
+        "counters": {
+            "c": 20
+        },
+        "cubeName": "event_cube_109_day",
+        "fields": {
+            "app_version": "4.27.0",
+            "auto_topup": 3,
+            "brand": 2,
+            "gender": 0,
+            "has_spp": true,
+            "is_default_product": true,
+            "is_default_provider": true,
+            "is_stored_method": true,
+            "platform": 1
+        },
+        "partition": "2016-06-27"
+    },
+    {
+        "counters": {
+            "c": 1
+        },
+        "cubeName": "event_cube_109_day",
+        "fields": {
+            "app_version": "4.33.0",
+            "auto_topup": 2,
+            "brand": 3,
+            "gender": 1,
+            "has_spp": true,
+            "is_default_product": true,
+            "is_default_provider": true,
+            "is_stored_method": true,
+            "platform": 3
+        },
+        "partition": "2016-06-27"
+    },
+    {
+[
+    {
+        "counters": {
+            "c": 20
+        },
+        "cubeName": "event_cube_109_day",
+        "fields": {
+            "app_version": "4.27.0",
+            "auto_topup": 3,
+            "brand": 2,
+            "gender": 0,
+            "has_spp": true,
+            "is_default_product": true,
+            "is_default_provider": true,
+            "is_stored_method": true,
+            "platform": 1
+        },
+        "partition": "2016-06-27"
+    },
+    {
+        "counters": {
+            "c": 1
+        },
+        "cubeName": "event_cube_109_day",
+        "fields": {
+            "app_version": "4.33.0",
+            "auto_topup": 2,
+            "brand": 3,
+            "gender": 1,
+            "has_spp": true,
+            "is_default_product": true,
+            "is_default_provider": true,
+            "is_stored_method": true,
+            "platform": 3
+        },
+        "partition": "2016-06-27"
+    },
+    {
+        },
+        "cubeName": "event_cube_100_hour",
+        "fields": {
+            "activation_place": null,
+            "app_version": "4.38.2",
+            "brand": 2,
+            "gender": 2,
+            "gift_button": 1,
+            "message_first": false,
+            "platform": 3
+        },
+        "partition": "2016-06-27 00"
+    },
+    {
+        "counters": {
+            "c": 6
+        },
+        "cubeName": "event_cube_100_hour",
+        "fields": {
+            "activation_place": null,
+            "app_version": "4.39.0",
+            "brand": 2,
+            "gender": 1,
+            "gift_button": 1,
+            "message_first": false,
+            "platform": 3
+        },
+        "partition": "2016-06-27 00"
+    },
+    {
+        "counters": {
+            "c": 64
+        },
+        "cubeName": "event_cube_100_hour",
+        "fields": {
+            "activation_place": null,
+            "app_version": "4.43.1",
+            "brand": 2,
+            "gender": 2,
+            "gift_button": 7,
+            "message_first": true,
+            "platform": 3
+        },
+        "partition": "2016-06-27 00"
+    }
+]
 ```
 
 In first instance rows are augmented with fields not specified and inserted. If this row already 
