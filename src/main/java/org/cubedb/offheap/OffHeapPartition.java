@@ -617,6 +617,8 @@ public class OffHeapPartition implements Partition {
 
 	@Override
 	public Stream<DataRow> asDataRowStream() {
+		if(this.map==null)
+			this.initializeMap();
 		return this.map.entrySet().map(e -> {
 			DataRow r = new DataRow();
 			r.setFields(this.bytesToMap(e.getKey()));
