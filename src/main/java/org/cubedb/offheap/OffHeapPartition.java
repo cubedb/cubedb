@@ -539,7 +539,7 @@ public class OffHeapPartition implements Partition {
 		long metricSize = this.metrics.values().stream().mapToLong(Metric::size).sum();
 		int columnBlocks = this.columns.values().stream().mapToInt(Column::getNumBuffers).sum();
 		int metricBLocks = this.metrics.values().stream().mapToInt(Metric::getNumBuffers).sum();
-		long lookupSize = (long) this.map.size() * this.columns.size() * Short.BYTES;
+		long lookupSize = (long) (this.map!=null?this.map.size():0l) * this.columns.size() * Short.BYTES;
 		Map<String, Object> stats = new HashMap<String, Object>();
 		stats.put(Constants.STATS_COLUMN_SIZE, columnSize);
 		stats.put(Constants.STATS_METRIC_SIZE, metricSize);

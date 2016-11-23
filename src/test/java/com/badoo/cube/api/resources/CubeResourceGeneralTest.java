@@ -14,6 +14,7 @@ import javax.ws.rs.core.MediaType;
 
 import org.cubedb.api.resources.CubeResource;
 import org.cubedb.api.utils.APIResponse;
+import org.cubedb.core.Constants;
 import org.cubedb.core.MultiCube;
 import org.cubedb.core.MultiCubeImpl;
 import org.cubedb.core.beans.DataRow;
@@ -34,9 +35,11 @@ import com.owlike.genson.GensonBuilder;
 public class CubeResourceGeneralTest {
 	  private HttpServer httpServer;
 	  private WebTarget webTarget;
+	  private MultiCube cube;
 	  private static final URI baseUri = URI.create("http://localhost:9090/rest/");
 	  
 	  public static final Logger log = LoggerFactory.getLogger(CubeResourceGeneralTest.class);
+	  //public static final savePath = 
 
 	 
 	 
@@ -44,7 +47,7 @@ public class CubeResourceGeneralTest {
 	  public void setup() throws Exception {
 	    //create ResourceConfig from Resource class
 	    ResourceConfig rc = new ResourceConfig();
-	    MultiCube cube = new MultiCubeImpl(null);
+	    cube = new MultiCubeImpl(null);
 	    rc.registerInstances(new CubeResource(cube));
 	 
 	    //create the Grizzly server instance
@@ -113,5 +116,49 @@ public class CubeResourceGeneralTest {
 
 		   APIResponse<Map<String, Map<String, Map<String, Long>>>> outGet = new Genson().deserialize(response, new GenericType<APIResponse<Map<String, Map<String, Map<String, Long>>>>>(){});
 		   log.info("{}", outGet);
+	  }
+	  
+	  @Test
+	  public void testInsertCacheExpireAndStats() throws InterruptedException {
+		  //Response r = null;
+		  Constants.KEY_MAP_TTL = 50;
+		  Genson builder = new GensonBuilder().useIndentation(true).create(); 
+		  int numFields = 2;
+		  int numValues = 3;
+		  int numPartitions = 5;
+		  int numCubes = 3;
+		  for(int c=0;c<numCubes;c++){
+		  for(int i=0;i<numPartitions;i++){
+			String partitionName = "2016-09-22 0"+(i);
+		  String cubeName="cubeName_"+c;
+			List<DataRow> data = TestUtils.genMultiColumnData(cubeName, partitionName, "f", numFields, numValues);
+		  log.info("Inserting {} rows...", data.size());
+		  //log.info(builder.serialize(data));
+		  Entity<List<DataRow>> entity = Entity.entity(data, MediaType.APPLICATION_JSON_TYPE);
+		  String response = webTarget.path("v1/insert")
+				.request().post(entity,String.class);
+		
+		  APIResponse<Map<String, Integer>> outInsert = new Genson().deserialize(response, new GenericType<APIResponse<Map<String, Integer>>>(){});
+		  }
+		  }
+		  
+		  Thread.sleep(Constants.KEY_MAP_TTL + 1);
+		  String responseBeforeOptimization = webTarget.path("v1/stats")
+				  .request().get(String.class);// .get();
+		  
+		  APIResponse<Map<String, Object>> outStats = new Genson().deserialize(responseBeforeOptimization, new GenericType<APIResponse<Map<String, Object>>>(){});
+		   log.info("{}", outStats);
+		   
+		   webTarget.path("v1/stats")
+					  .request().get(String.class);
+		   
+		   int numOptimizedPartitions = this.cube.optimize();
+		   log.info("Optimized {} partitions", numOptimizedPartitions);
+		   log.info("Stats: {}", this.cube.getStats());
+		   String responseAfterOptimization = webTarget.path("v1/stats")
+					  .request().get(String.class);// .get();
+		   APIResponse<Map<String, Object>> outStatsAfter = new Genson().deserialize(responseBeforeOptimization, new GenericType<APIResponse<Map<String, Object>>>(){});
+		   log.info("{}", outStatsAfter);
+		   //log.info(builder.serialize(outGet));
 	  }
 }
