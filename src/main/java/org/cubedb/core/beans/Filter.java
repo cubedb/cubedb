@@ -3,8 +3,9 @@ package org.cubedb.core.beans;
 import java.util.Arrays;
 
 public class Filter {
-	
+
 	public String field;
+	public String[] values;
 
 	// public FilterOperator filterOperator;
 	public String getField() {
@@ -23,9 +24,6 @@ public class Filter {
 		this.values = values;
 	}
 
-	public String[] values;
-
-	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
