@@ -374,7 +374,7 @@ public class OffHeapPartition implements Partition {
 		// creating a map of matchers based on filter
 
 		/*
-		 * These fields are mostly primitive array representations of what
+		 * these fields are mostly primitive array representations of what
 		 * previously was stored in Objects and HashMaps
 		 */
 
@@ -458,26 +458,32 @@ public class OffHeapPartition implements Partition {
 					}
 
 					/*
-					 * Second, we retrieve the values of all columns. 
-					 * For each side, we increment the side counter. 
-					 * Third, we
+					 * Then, check if all columns of a row match. Increase the
+					 * totalCounters if positive.
+					 */
+					if (checkAllMatch(columnMatches)) {
+						for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
+							totalCounters[mIndex] += metricValues[mIndex];
+						}
+					}
+
+					/*
+					 * Last, retrieve the values of all columns. For each side,
+					 * we increment the side counter, but only when *other* side
+					 * filters match.
 					 */
 					for (int side = 0; side < this.fieldLookup.size(); side++) {
-						final int columnId = columnValues[side];
-						MatchType matchType = checkColumnMatch(columnMatches, side);
-						if (matchType != MatchType.NO_MATCH) {
-							// this row matches other filters
-							for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-								sideCounters[side][columnId][mIndex] += metricValues[mIndex];
-
-								if (side == 0 && matchType == MatchType.ALL_COLUMNS_MATCH) {
-									/*
-									 * In fact, the row matches all filters. 
-									 * We are going to increase the total counters.
-									 */
-									totalCounters[mIndex] += metricValues[mIndex];
-								}
-							}
+						/*
+						 * We don't care if the current side filter is applied
+						 * or not - it should only influence *other* side
+						 * filtering.
+						 */
+						if (!checkOtherMatch(columnMatches, side)) {
+							continue;
+						}
+						final int columnValueId = columnValues[side];
+						for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
+							sideCounters[side][columnValueId][mIndex] += metricValues[mIndex];
 						}
 					}
 				}
@@ -502,19 +508,22 @@ public class OffHeapPartition implements Partition {
 
 	}
 
-	private MatchType checkColumnMatch(boolean[] matches, int side) {
-		MatchType currentMatch = MatchType.ALL_COLUMNS_MATCH;
-
+	private boolean checkAllMatch(boolean[] matches) {
 		for (int i = 0; i < matches.length; i++) {
 			if (!matches[i]) {
-				if (i == side)
-					currentMatch = MatchType.OTHER_COLUMNS_MATCH;
-				else {
-					return MatchType.NO_MATCH;
-				}
+				return false;
 			}
 		}
-		return currentMatch;
+		return true;
+	}
+
+	private boolean checkOtherMatch(boolean[] matches, int side) {
+		for (int i = 0; i < matches.length; i++) {
+			if (!matches[i] && i != side) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	// TODO: maybe rewrite to a bitwise op
