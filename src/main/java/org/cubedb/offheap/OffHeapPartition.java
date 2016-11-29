@@ -472,18 +472,18 @@ public class OffHeapPartition implements Partition {
 					 * we increment the side counter, but only when *other* side
 					 * filters match.
 					 */
-					for (int side = 0; side < this.fieldLookup.size(); side++) {
+					for (int fieldId = 0; fieldId < this.fieldLookup.size(); fieldId++) {
 						/*
 						 * We don't care if the current side filter is applied
 						 * or not - it should only influence *other* side
 						 * filtering.
 						 */
-						if (!checkOtherMatch(columnMatches, side)) {
+						if (!checkOtherMatch(columnMatches, fieldId)) {
 							continue;
 						}
-						final int columnValueId = columnValues[side];
+						final int columnValueId = columnValues[fieldId];
 						for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-							sideCounters[side][columnValueId][mIndex] += metricValues[mIndex];
+							sideCounters[fieldId][columnValueId][mIndex] += metricValues[mIndex];
 						}
 					}
 				}
