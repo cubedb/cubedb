@@ -409,8 +409,8 @@ public class OffHeapPartition implements Partition {
 			final Map<String, IdMatcher> matchers = transformFiltersToMatchers(filters);
 
 			for (Entry<String, IdMatcher> e : matchers.entrySet()) {
-				int field_id = this.fieldLookup.getValue(e.getKey());
-				matchersArray[field_id] = e.getValue();
+				int fieldId = this.fieldLookup.getValue(e.getKey());
+				matchersArray[fieldId] = e.getValue();
 			}
 
 			/*
@@ -418,8 +418,8 @@ public class OffHeapPartition implements Partition {
 			 * that in 99% of cases there is only one metric
 			 */
 			for (Entry<String, Metric> e : metrics.entrySet()) {
-				int field_id = this.metricLookup.getValue(e.getKey());
-				metricsArray[field_id] = e.getValue();
+				int fieldId = this.metricLookup.getValue(e.getKey());
+				metricsArray[fieldId] = e.getValue();
 			}
 
 			/*
