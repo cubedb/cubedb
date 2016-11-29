@@ -69,7 +69,7 @@ public class OffHeapPartitionTest {
 		//TestUtils.setFinalStatic(Constants.class.getField("KEY_MAP_TTL"), oldTtl);
 		Constants.KEY_MAP_TTL = oldTtl;
 	}
-	
+
 	@Test
 	public void testInsertRepetableDataLarge() {
 		OffHeapPartition p = createPartition();
@@ -163,6 +163,22 @@ public class OffHeapPartitionTest {
 		assertEquals(2, result.getResults().size());
 		assertEquals(1l, result.getResults().get(new SearchResultRow("f1", "f1_value_0", "c")).longValue());
 
+	}
+
+	@Test
+	public void testGroupedGet() {
+		OffHeapPartition p = createPartition();
+		List<DataRow> data = new ArrayList<>();
+		data.add(TestUtils.genDataRow("f1", "v1", "f2", "v1"));
+		data.add(TestUtils.genDataRow("f1", "v2", "f2", "v1"));
+		data.add(TestUtils.genDataRow("f1", "v2", "f2", "v1"));
+		p.insertData(data);
+		SearchResult result = p.get(new ArrayList<Filter>());
+		log.debug("results with grouped: {}", result);
+		// 2 + null values for f1, 1 + null values for f2
+		assertEquals(5, result.getResults().size());
+		// non-grouped results * (2 grouping values + null)
+		assertEquals(15, result.getGroupedResults().size());
 	}
 
 	@Test
@@ -341,15 +357,15 @@ public class OffHeapPartitionTest {
 	@Test
 	public void testGetSelectiveFilterSameField() {
 		OffHeapPartition p = createPartition();
-		
+
 		//List<DataRow> data = TestUtils.genMultiColumnData("f", numColumns, numValues);
-		
+
 		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v1", "f3", "v1"));
 		p.insert(TestUtils.genDataRow("f1", "v2", "f2", "v1", "f3", "v1"));
 		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v1", "f3", "v1"));
 		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v2", "f3", "v2"));
-		
-		
+
+
 		SearchResult result = p.get(TestUtils.getFilterFor("f1", "v2"));
 		long firstColumnCount = 0;
 		long secondColumnCount = 0;
@@ -368,19 +384,19 @@ public class OffHeapPartitionTest {
 		assertEquals(1l, result.getResults().get(new SearchResultRow("f3", "v1", "c")).longValue());
 		assertEquals(4l, firstColumnCount);
 		assertEquals(1l, secondColumnCount);
-		
+
 		assertEquals(2l, p.get(TestUtils.getFilterFor("f3", "v1"))
 				.getResults()
 				.get(new SearchResultRow("f1", "v1", "c")).longValue());
 	}
-	
+
 	@Test
 	public void insertNullTest(){
 		OffHeapPartition p = createPartition();
 		p.insert(TestUtils.genDataRow("not_null", "1", "null", null));
 		p.get(TestUtils.getFilterFor("null", null));
 	}
-	
+
 	@Test
 	public void serDeTest() throws FileNotFoundException, IOException
 	{
@@ -399,8 +415,8 @@ public class OffHeapPartitionTest {
 		output.close();
 		long t1 = System.nanoTime();
 		log.info("Took {} ms to write {} records", (t1 - t0) / 1000000, data.size());
-		
-		
+
+
 		// Now reading the file
 		Input input = new Input(new GZIPInputStream( new FileInputStream(destination)));
 		t0 = System.nanoTime();
@@ -414,7 +430,7 @@ public class OffHeapPartitionTest {
 		log.info("{}", newP.getStats());
 		destination.deleteOnExit();
 	}
-	
+
 	@Test
 	public void faultySerDeTest() throws FileNotFoundException, IOException
 	{
@@ -425,16 +441,16 @@ public class OffHeapPartitionTest {
 			p.insert(r);
 		}
 		File dump = TestUtils.dumpToTmpFile(p);
-		
+
 		Input input = new Input(new GZIPInputStream( new FileInputStream(dump)));
 		long t0 = System.nanoTime();
 		Kryo kryo = new Kryo();
 		Partition newP = (Partition)kryo.readClassAndObject(input);
 		long t1 = System.nanoTime();
 		log.info("Took {} ms to read {} records", (t1 - t0) / 1000000, newP.getNumRecords());
-		log.info("{}", newP.getStats());		
+		log.info("{}", newP.getStats());
 	}
-	
+
 	@Test
 	public void counterConsistencyTest() throws FileNotFoundException, IOException
 	{
@@ -452,14 +468,14 @@ public class OffHeapPartitionTest {
 		p.insert(TestUtils.genDataRow("new_field", null));
 		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
 	}
-	
+
 	@Test
 	public void counterConsistencyTestLarge() throws FileNotFoundException, IOException
 	{
 		int numColumns = 5;
 		int numValues = 6;
 		Partition p = createPartition();
-		
+
 		for(DataRow r: TestUtils.genMultiColumnData("f1", numColumns, numValues))
 			p.insert(r);
 		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());

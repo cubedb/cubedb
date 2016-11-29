@@ -2,9 +2,9 @@ package org.cubedb.core.beans;
 
 public class SearchResultRow {
 
-	private String fieldName;
-	private String fieldValue;
-	private String metricName;
+	protected String fieldName;
+	protected String fieldValue;
+	protected String metricName;
 
 	public SearchResultRow() {
 		super();

@@ -20,6 +20,7 @@ import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.SearchResult;
 import org.cubedb.core.beans.SearchResultRow;
+import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.core.lookups.HashMapLookup;
 import org.cubedb.core.lookups.Lookup;
 import org.cubedb.core.tiny.TinyColumn;
@@ -312,6 +313,27 @@ public class OffHeapPartition implements Partition {
 		return out;
 	}
 
+	protected long[][][][] initGroupedSideCounters(final int groupFieldId) {
+		final long[][][][] out = new long[this.fieldLookup.size()][][][];
+		final String groupFieldName = this.fieldLookup.getKey(groupFieldId);
+		final Lookup groupSide = this.lookups.get(groupFieldName);
+		// log.debug("Group side field name, values: {}, {}",
+		// 		  groupFieldName, groupSide.size());
+		for (int f = 0; f < this.fieldLookup.size(); f++) {
+			String fieldName = this.fieldLookup.getKey(f);
+			Lookup side = this.lookups.get(fieldName);
+			long[][][] sideCounters = new long[side.size()][groupSide.size()][this.metricLookup.size()];
+			for (int s = 0; s < sideCounters.length; s++)
+				for (int g = 0; g < groupSide.size(); g++)
+					for (int m = 0; m < this.metricLookup.size(); m++)
+						sideCounters[s][g][m] = 0l;
+			out[f] = sideCounters;
+		}
+		// log.debug("Grouped counters look like this {}", (Object)out);
+		return out;
+	}
+
+
 	protected Column[] getColumnsAsArray() {
 		final Column[] columns = new Column[this.columns.size()];
 		for (Entry<String, Column> e : this.columns.entrySet()) {
@@ -320,7 +342,7 @@ public class OffHeapPartition implements Partition {
 		return columns;
 	}
 
-	protected SearchResult convertToResult(long[][][] sideCounters, long[] totalCounters) {
+	protected SearchResult convertToResult(long[][][] sideCounters, long[][][][] groupedSideCounters, long[] totalCounters) {
 		final Map<SearchResultRow, Long> result = new HashMap<SearchResultRow, Long>();
 		for (int i = 0; i < sideCounters.length; i++) {
 			String sideName = this.fieldLookup.getKey(i);
@@ -338,11 +360,37 @@ public class OffHeapPartition implements Partition {
 			}
 
 		}
+
+		final Map<GroupedSearchResultRow, Long> groupedResult = new HashMap<GroupedSearchResultRow, Long>();
+		// TODO:
+		final String groupSideName = this.fieldLookup.getKey(0);
+		final Lookup groupSideLookup = this.lookups.get(groupSideName);
+		for (int i = 0; i < groupedSideCounters.length; i++) {
+			String sideName = this.fieldLookup.getKey(i);
+			final Lookup sideLookup = this.lookups.get(sideName);
+			for (int j = 0; j < groupedSideCounters[i].length; j++) {
+				String sideValue = sideLookup.getKey(j);
+				for (int g = 0; g < groupedSideCounters[i][j].length; g++) {
+					String groupSideValue = groupSideLookup.getKey(g);
+					for (int m = 0; m < groupedSideCounters[i][j][g].length; m++) {
+						String metricName = this.metricLookup.getKey(m);
+						GroupedSearchResultRow r = new GroupedSearchResultRow();
+						r.setGroupFieldName(groupSideName);
+						r.setGroupFieldValue(groupSideValue);
+						r.setFieldName(sideName);
+						r.setFieldValue(sideValue);
+						r.setMetricName(metricName);
+						groupedResult.put(r, groupedSideCounters[i][j][g][m]);
+					}
+				}
+			}
+		}
+
 		Map<String, Long> totalCounts = new HashMap<String, Long>(totalCounters.length);
 		for (int i = 0; i < totalCounters.length; i++)
 			totalCounts.put(this.metricLookup.getKey(i), totalCounters[i]);
 		// log.debug("Converted {} to {}", sideCounters, result);
-		return new SearchResult(result, totalCounts);
+		return new SearchResult(result, groupedResult, totalCounts);
 	}
 
 	protected SearchResult getEmptySearchResult() {
@@ -350,7 +398,9 @@ public class OffHeapPartition implements Partition {
 		for (String metricName : this.metrics.keySet()) {
 			totalCounts.put(metricName, 0l);
 		}
-		SearchResult r = new SearchResult(new HashMap<SearchResultRow, Long>(), totalCounts);
+		SearchResult r = new SearchResult(new HashMap<SearchResultRow, Long>(),
+										  new HashMap<GroupedSearchResultRow, Long>(),
+										  totalCounts);
 		return r;
 	}
 
@@ -360,12 +410,19 @@ public class OffHeapPartition implements Partition {
 		long t0 = System.nanoTime(); // debug purposes
 		int curSize = size; // current max index of rows in the db
 
+
 		// creating an empty result set, with id's
 		final String[] metricNames = this.metricLookup.getKeys();
 		final long[] totalCounters = new long[metricNames.length];
 
-		// field names -> (field id -> (metric name -> counter))
+		// field names -> (column value id -> (metric name -> counter))
 		final long[][][] sideCounters = initSideCounters();
+
+		// a field to use for result grouping
+		final int groupFieldId = 0;
+		// field names -> (column value id -> (group value id -> (metric name -> counter)))
+		final long[][][][] groupedSideCounters = initGroupedSideCounters(groupFieldId);
+
 		final Column[] columns = getColumnsAsArray();
 
 		int matchCount = 0; // Debug variable
@@ -431,6 +488,11 @@ public class OffHeapPartition implements Partition {
 			for (int i = 0; i < curSize; i++) {
 
 				/*
+				 * Find out the value of the field to group by.
+				 */
+				final int groupFieldValueId = columns[groupFieldId].get(i);
+
+				/*
 				 * Here we do not retrieve values of all columns. We only get
 				 * those which are related to a filter/matcher
 				 */
@@ -484,6 +546,7 @@ public class OffHeapPartition implements Partition {
 						final int columnValueId = columnValues[fieldId];
 						for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
 							sideCounters[fieldId][columnValueId][mIndex] += metricValues[mIndex];
+							groupedSideCounters[fieldId][columnValueId][groupFieldValueId][mIndex] += metricValues[mIndex];
 						}
 					}
 				}
@@ -494,7 +557,7 @@ public class OffHeapPartition implements Partition {
 			log.warn(e.getMessage());
 			return getEmptySearchResult();
 		}
-		final SearchResult result = convertToResult(sideCounters, totalCounters);
+		final SearchResult result = convertToResult(sideCounters, groupedSideCounters, totalCounters);
 		final long t1 = System.nanoTime();
 		// log.debug("Got {} matches for the query in {}ms among {} rows",
 		// matchCount, (t1 - t0) / 1000000.0, curSize);

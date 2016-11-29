@@ -5,11 +5,13 @@ import java.util.Map;
 public class SearchResult {
 
 	Map<SearchResultRow, Long> results;
+	Map<GroupedSearchResultRow, Long> groupedResults;
 	Map<String, Long> totalCounts;
 
-	public SearchResult(Map<SearchResultRow, Long> results, Map<String, Long> totalCounts) {
+	public SearchResult(Map<SearchResultRow, Long> results, Map<GroupedSearchResultRow, Long> groupedResults, Map<String, Long> totalCounts) {
 		super();
 		this.results = results;
+		this.groupedResults = groupedResults;
 		this.totalCounts = totalCounts;
 	}
 
@@ -20,6 +22,11 @@ public class SearchResult {
 	public void setResults(Map<SearchResultRow, Long> results) {
 		this.results = results;
 	}
+
+	public Map<GroupedSearchResultRow, Long> getGroupedResults() {
+		return groupedResults;
+	}
+
 
 	public Map<String, Long> getTotalCounts() {
 		return totalCounts;
@@ -62,7 +69,9 @@ public class SearchResult {
 
 	@Override
 	public String toString() {
-		return "SearchResult [results=" + results + ", totalCounts=" + totalCounts + "]";
+		return "SearchResult [results=" + results +
+			", groupedResults=" + groupedResults +
+			", totalCounts=" + totalCounts + "]";
 	}
 
 }
