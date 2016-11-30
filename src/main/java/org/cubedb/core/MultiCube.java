@@ -13,8 +13,14 @@ public interface MultiCube {
 	public Map<GroupedSearchResultRow, Long> get(String cubeName, String fromPartition, String toPartition,
 			List<Filter> filters);
 
+	public Map<GroupedSearchResultRow, Long> get(String cubeName, String fromPartition, String toPartition,
+			List<Filter> filters, String groupBy);
+
 	public Map<GroupedSearchResultRow, Long> get(String cubeName, int lastNum,
 			List<Filter> filters);
+
+	public Map<GroupedSearchResultRow, Long> get(String cubeName, int lastNum,
+		List<Filter> filters, String groupBy);
 
 	public boolean hasCube(String cubeName);
 

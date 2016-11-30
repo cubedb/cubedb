@@ -13,9 +13,9 @@ import org.cubedb.core.beans.GroupedSearchResultRow;
 public interface Cube {
 	void insert(List<DataRow> data);
 	Map<GroupedSearchResultRow, Long> get(
-			String fromPartition, String toPartition, List<Filter> filters);
+		String fromPartition, String toPartition, List<Filter> filters, String groupBy);
 	Map<GroupedSearchResultRow, Long> get(
-			int lastRange, List<Filter> filters);
+		int lastRange, List<Filter> filters, String groupBy);
 	int getNumRecords();
 	void deletePartition(String partitionName);
 	TreeSet<String> getPartitions(String from, String to);

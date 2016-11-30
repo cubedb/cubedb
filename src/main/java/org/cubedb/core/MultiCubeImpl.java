@@ -53,9 +53,15 @@ public class MultiCubeImpl implements MultiCube {
 	@Override
 	public Map<GroupedSearchResultRow, Long> get(String cubeName, String fromPartition, String toPartition,
 			List<Filter> filters) {
-		Cube c = this.cubes.get(cubeName);
+		return get(cubeName, fromPartition, toPartition, filters, null);
+	}
+
+	@Override
+	public Map<GroupedSearchResultRow, Long> get(String cubeName, String fromPartition, String toPartition,
+			List<Filter> filters, String groupBy) {
+		Cube c = cubes.get(cubeName);
 		if (c != null) {
-			return c.get(fromPartition, toPartition, filters);
+			return c.get(fromPartition, toPartition, filters, groupBy);
 		} else {
 			return new HashMap<GroupedSearchResultRow, Long>();
 		}
@@ -64,18 +70,24 @@ public class MultiCubeImpl implements MultiCube {
 
 	@Override
 	public boolean hasCube(String cubeName) {
-		return this.cubes.containsKey(cubeName);
+		return cubes.containsKey(cubeName);
 	}
 
 	@Override
 	public Map<GroupedSearchResultRow, Long> get(String cubeName, int lastNum, List<Filter> filters) {
+		return get(cubeName, lastNum, filters, null);
+	}
+
+	@Override
+	public Map<GroupedSearchResultRow, Long> get(String cubeName, int lastNum, List<Filter> filters, String groupBy) {
 		Cube c = this.cubes.get(cubeName);
 		if (c != null) {
-			return c.get(lastNum, filters);
+			return c.get(lastNum, filters, groupBy);
 		} else {
 			return new HashMap<GroupedSearchResultRow, Long>();
 		}
 	}
+
 
 	@Override
 	public void save(String path) {

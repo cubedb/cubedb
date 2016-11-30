@@ -106,16 +106,16 @@ public class CubeImplTest {
 			}
 			cube.insert(data);
 			size += data.size();
-			TestUtils.ensureSidesAddUp(cube.get(partition, partition, new ArrayList<Filter>()));
-			TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>()));
+			TestUtils.ensureSidesAddUp(cube.get(partition, partition, new ArrayList<Filter>(), null));
+			TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>(), null));
 		}
 		log.info("Starting test");
 		long t0, t1, recordsPerSecond;
-		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>()));
+		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>(), null));
 		for (int i = 0; i < 10; i++) {
 			t0 = System.nanoTime();
 			Map<GroupedSearchResultRow, Long> result = cube.get("p_1000", "p_" + (1100 + numPartitions),
-					TestUtils.getFilterFor("f_1", "f_1_1"));
+																TestUtils.getFilterFor("f_1", "f_1_1"), null);
 			// Map<SearchResultRow, Long> result = cube.get("p_0", "p_" + (1100
 			// + numPartitions), new ArrayList<Filter>());
 			t1 = System.nanoTime();
@@ -140,7 +140,7 @@ public class CubeImplTest {
 
 			@Override
 			public Map<GroupedSearchResultRow, Long> get(final String fromPartition, final String toPartition,
-					List<Filter> filters) {
+				List<Filter> filters, String groupBy) {
 				assertEquals("p_" + (1000 + numPartitions - lastCount), fromPartition);
 				assertEquals("p_" + (1000 + numPartitions - 1), toPartition);
 				return null;
@@ -156,7 +156,7 @@ public class CubeImplTest {
 			data.add(row);
 		}
 		c.insert(data);
-		c.get(lastCount, new ArrayList<Filter>());
+		c.get(lastCount, new ArrayList<Filter>(), null);
 	}
 
 	@Test
@@ -203,7 +203,7 @@ public class CubeImplTest {
 		List<DataRow> data = TestUtils.readFromJsonFile("src/test/resources/dumps/faulty.json.gz");
 		cube.insert(data);
 		log.info("Starting test");
-		TestUtils.ensureSidesAddUp(cube.get("0", "z", new ArrayList<Filter>()));
+		TestUtils.ensureSidesAddUp(cube.get("0", "z", new ArrayList<Filter>(), null));
 		File out = TestUtils.dumpCubeToTmpFile(cube);
 		Cube newCube = new CubeImpl("ts");
 		newCube.load(out.getAbsolutePath());
@@ -258,11 +258,11 @@ public class CubeImplTest {
 	public void counterConsistencyTest() throws FileNotFoundException, IOException {
 		CubeImpl cube = new CubeImpl("p");
 		cube.insert(TestUtils.genDataRowList("p_1000", "f1", "v1", "old_field", "not_null"));
-		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_1000", new ArrayList<Filter>()));
+		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_1000", new ArrayList<Filter>(), null));
 		cube.insert(TestUtils.genDataRowList("p_1000", "f1", "v2", "old_field", "not_null"));
-		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_1000", new ArrayList<Filter>()));
+		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_1000", new ArrayList<Filter>(), null));
 		cube.insert(TestUtils.genDataRowList("p_1000", "new_field", "not_null"));
-		TestUtils.ensureSidesAddUp(cube.get("p_100", "p_2000", new ArrayList<Filter>()));
+		TestUtils.ensureSidesAddUp(cube.get("p_100", "p_2000", new ArrayList<Filter>(), null));
 	}
 
 	// TODO: this is a testcase that highlights a known bug. Once fixed, this unit test will pass
@@ -282,13 +282,13 @@ public class CubeImplTest {
 				d.setPartition(partition);
 			}
 			cube.insert(data);
-			TestUtils.ensureSidesAddUp(cube.get(partition, partition, new ArrayList<Filter>()));
-			TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>()));
+			TestUtils.ensureSidesAddUp(cube.get(partition, partition, new ArrayList<Filter>(), null));
+			TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>(), null));
 		}
 
 		cube.insert(TestUtils.genDataRowList("p_1000", "new_field", "not_null"));
-		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>()));
+		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>(), null));
 		cube.insert(TestUtils.genDataRowList("p_1100", "new_field", "not_null"));
-		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>()));
+		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>(), null));
 	}
 }

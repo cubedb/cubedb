@@ -125,14 +125,14 @@ public class CubeImpl implements Cube {
 	}
 
 	protected Map<GroupedSearchResultRow, MutableLong> get(List<Pair<String, Partition>> partitions, List<Filter> filters,
-			String fromPartition, String toPartition) {
+			String fromPartition, String toPartition, String groupBy) {
 		Map<GroupedSearchResultRow, MutableLong> out = new HashMap<GroupedSearchResultRow, MutableLong>();
 		for (Pair<String, Partition> e : partitions) {
 			String partitionValue = e.getKey();
 			boolean partitionMatch = partitionValue.compareTo(fromPartition) >= 0
 					&& partitionValue.compareTo(toPartition) <= 0;
 
-			SearchResult searchResult = e.getValue().get(filters);
+			SearchResult searchResult = e.getValue().get(filters, groupBy);
 			if (partitionMatch) {
 				for (Entry<GroupedSearchResultRow, Long> sr : searchResult.getResults().entrySet()) {
 					MutableLong c = out.get(sr.getKey());
@@ -155,19 +155,20 @@ public class CubeImpl implements Cube {
 		final private List<Pair<String, Partition>> partitions;
 		private Map<GroupedSearchResultRow, MutableLong> result;
 		final private List<Filter> filters;
-		final private String fromPartition, toPartition;
+		final private String fromPartition, toPartition, groupBy;
 
 		public Searcher(List<Pair<String, Partition>> partitions, List<Filter> filters, String fromPartition,
-				String toPartition) {
+				String toPartition, String groupBy) {
 			this.partitions = partitions;
 			this.filters = filters;
 			this.fromPartition = fromPartition;
 			this.toPartition = toPartition;
+			this.groupBy = groupBy;
 		}
 
 		@Override
 		public void run() {
-			this.result = get(partitions, filters, fromPartition, toPartition);
+			this.result = get(partitions, filters, fromPartition, toPartition, groupBy);
 		}
 
 		public Map<GroupedSearchResultRow, MutableLong> getResult() {
@@ -177,7 +178,7 @@ public class CubeImpl implements Cube {
 	}
 
 	@Override
-	public Map<GroupedSearchResultRow, Long> get(final String fromPartition, final String toPartition, List<Filter> filters) {
+	public Map<GroupedSearchResultRow, Long> get(final String fromPartition, final String toPartition, List<Filter> filters, String groupBy) {
 		long t0 = System.currentTimeMillis();
 		List<Pair<String, Partition>> partitions = this.partitions.entrySet().stream()
 				.filter((e) -> e.getKey().compareTo(fromPartition) >= 0 && e.getKey().compareTo(toPartition) <= 0)
@@ -201,7 +202,7 @@ public class CubeImpl implements Cube {
 		Searcher[] searchers = new Searcher[partitionSlices.size()];
 		Thread[] threads = new Thread[partitionSlices.size()];
 		for (int i = 0; i < searchers.length; i++) {
-			searchers[i] = new Searcher(partitionSlices.get(i), realFilters, fromPartitionFilter, toPartitionFilter);
+			searchers[i] = new Searcher(partitionSlices.get(i), realFilters, fromPartitionFilter, toPartitionFilter, groupBy);
 			threads[i] = new Thread(searchers[i]);
 			threads[i].start();
 		}
@@ -233,7 +234,7 @@ public class CubeImpl implements Cube {
 	}
 
 	@Override
-	public Map<GroupedSearchResultRow, Long> get(int lastRange, List<Filter> filters) {
+	public Map<GroupedSearchResultRow, Long> get(int lastRange, List<Filter> filters, String groupBy) {
 		List<String> partitions = this.partitions.keySet().stream().sorted((e, ot) -> ot.compareTo(e)).limit(lastRange)
 				.collect(Collectors.toList());
 		if (partitions.size() == 0) {
@@ -242,7 +243,7 @@ public class CubeImpl implements Cube {
 		final String toPartition = partitions.get(0);
 		final String fromPartition = partitions.get(partitions.size() - 1);
 
-		return this.get(fromPartition, toPartition, filters);
+		return get(fromPartition, toPartition, filters, groupBy);
 	}
 
 	@Override
