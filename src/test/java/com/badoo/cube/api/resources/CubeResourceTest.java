@@ -20,7 +20,7 @@ import org.cubedb.core.MultiCube;
 import org.cubedb.core.MultiCubeImpl;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
-import org.cubedb.core.beans.SearchResultRow;
+import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -57,9 +57,9 @@ public class CubeResourceTest {
 		  }
 
 		@Override
-		public Map<SearchResultRow, Long> get(String cubeName, int lastNum, List<Filter> filters) {
-			Map<SearchResultRow, Long> out = new HashMap<SearchResultRow, Long>();
-			out.put(new SearchResultRow("fieldName", "fieldValue", "metricName"), 1l);
+		public Map<GroupedSearchResultRow, Long> get(String cubeName, int lastNum, List<Filter> filters) {
+			Map<GroupedSearchResultRow, Long> out = new HashMap<GroupedSearchResultRow, Long>();
+			out.put(new GroupedSearchResultRow("fieldName", "fieldValue", "metricName"), 1l);
 			return out;
 		}
 	  }

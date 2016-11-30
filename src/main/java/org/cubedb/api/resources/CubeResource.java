@@ -23,7 +23,7 @@ import org.cubedb.api.utils.APIResponse;
 import org.cubedb.core.MultiCube;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
-import org.cubedb.core.beans.SearchResultRow;
+import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.utils.CubeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,7 +63,7 @@ public class CubeResource {
 			f.setValues(values);
 			filters.add(f);
 		}
-		Map<SearchResultRow, Long> result = this.cube.get(cubeName, range, filters);
+		Map<GroupedSearchResultRow, Long> result = this.cube.get(cubeName, range, filters);
 		return new APIResponse<Map<String, Map<String, Map<String, Long>>>>(CubeUtils.searchResultsToMap(result), info,
 				startTime);
 

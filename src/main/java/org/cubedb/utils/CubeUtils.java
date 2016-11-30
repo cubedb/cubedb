@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 
 import javax.ws.rs.core.MultivaluedMap;
 
-import org.cubedb.core.beans.SearchResultRow;
+import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
