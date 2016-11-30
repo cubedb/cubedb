@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.Pair;
-import org.cubedb.core.beans.SearchResultRow;
+import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,13 +51,13 @@ public class MultiCubeImpl implements MultiCube {
 	}
 
 	@Override
-	public Map<SearchResultRow, Long> get(String cubeName, String fromPartition, String toPartition,
+	public Map<GroupedSearchResultRow, Long> get(String cubeName, String fromPartition, String toPartition,
 			List<Filter> filters) {
 		Cube c = this.cubes.get(cubeName);
 		if (c != null) {
 			return c.get(fromPartition, toPartition, filters);
 		} else {
-			return new HashMap<SearchResultRow, Long>();
+			return new HashMap<GroupedSearchResultRow, Long>();
 		}
 
 	}
@@ -68,12 +68,12 @@ public class MultiCubeImpl implements MultiCube {
 	}
 
 	@Override
-	public Map<SearchResultRow, Long> get(String cubeName, int lastNum, List<Filter> filters) {
+	public Map<GroupedSearchResultRow, Long> get(String cubeName, int lastNum, List<Filter> filters) {
 		Cube c = this.cubes.get(cubeName);
 		if (c != null) {
 			return c.get(lastNum, filters);
 		} else {
-			return new HashMap<SearchResultRow, Long>();
+			return new HashMap<GroupedSearchResultRow, Long>();
 		}
 	}
 
@@ -81,7 +81,7 @@ public class MultiCubeImpl implements MultiCube {
 	public void save(String path) {
 		this.save(path, false);
 	}
-	
+
 	public void save(String path, boolean asJson) {
 		if (this.isCurrentlySavingOrLoading) {
 			log.warn("Process of saving or loading is currently in progress.");
@@ -130,7 +130,7 @@ public class MultiCubeImpl implements MultiCube {
 	@Override
 	public void load(String path) {
 		long t0 = System.currentTimeMillis();
-		
+
 		if (this.isCurrentlySavingOrLoading) {
 			log.warn("Process of saving or loading is currently in progress.");
 			return;
@@ -142,7 +142,7 @@ public class MultiCubeImpl implements MultiCube {
 				log.error("Attempting to load from directory");
 				throw new InvalidParameterException("Path specified is a file");
 			}
-			
+
 			for (File cubeFile : p.listFiles()) {
 				log.info("Loading from file {}", cubeFile.getAbsolutePath());
 				String cubeName = cubeFile.getName().replace(".gz", "");
@@ -154,7 +154,7 @@ public class MultiCubeImpl implements MultiCube {
 					log.error("Could no load cube {}", cubeName);
 				}
 
-			} 
+			}
 			// this.loadParallel(p);
 		} else {
 			log.warn("Save path {} does not exist. It will be created next time when saving", path);
@@ -166,10 +166,10 @@ public class MultiCubeImpl implements MultiCube {
 
 
 	public void loadParallel(File p) {
-		this.cubes = 
+		this.cubes =
 		Arrays.stream(p.listFiles())
 		.parallel()
-		.map( cubeFile -> { 
+		.map( cubeFile -> {
 			log.info("Loading from file {}", cubeFile.getAbsolutePath());
 				String cubeName = cubeFile.getName().replace(".gz", "");
 				Cube c = createNewCube(partitionColumnName);
@@ -183,7 +183,7 @@ public class MultiCubeImpl implements MultiCube {
 			})
 		.filter(e -> e.getKey()!=null)
 		.collect(Collectors.toMap(Pair::getKey, Pair::getValue));
-		
+
 	}
 
 	@Override
@@ -238,7 +238,7 @@ public class MultiCubeImpl implements MultiCube {
 		}
 		return c;
 	}
-	
+
 	@Override
 	public int deleteCube(String fromPartition, String toPartition) {
 		int c = 0;
@@ -279,7 +279,7 @@ public class MultiCubeImpl implements MultiCube {
 		out.put(Constants.STATS_NUM_CUBES, partitionStats.size());
 		return out;
 	}
-	
+
 	public int optimize(){
 		return this.cubes.values().stream().mapToInt(Cube::optimize).sum();
 	}
