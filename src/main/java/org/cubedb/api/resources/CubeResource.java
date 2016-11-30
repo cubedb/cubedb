@@ -152,7 +152,6 @@ public class CubeResource {
 	public APIResponse<Map<String, String>> save(@Context UriInfo info) {
 		long startTs = System.currentTimeMillis();
 		log.info("Saving to {}", cube.getPath());
-		// cube.insert(rows);
 		cube.save(cube.getPath());
 		log.info("Saving finished");
 		return new APIResponse<Map<String, String>>(ImmutableMap.of("savePath", cube.getPath()), info, startTs);
@@ -164,7 +163,6 @@ public class CubeResource {
 		long startTs = System.currentTimeMillis();
 		String path = cube.getPath() + "/json";
 		log.info("Saving to {}", path);
-		// cube.insert(rows);
 		cube.saveAsJson(path);
 		log.info("Saving finished");
 		return new APIResponse<Map<String, String>>(ImmutableMap.of("savePath", path), info, startTs);
@@ -174,7 +172,6 @@ public class CubeResource {
 	@Path("/stats")
 	public APIResponse<Map<String, Object>> getStats(@Context UriInfo info) {
 		long startTs = System.currentTimeMillis();
-		// cube.insert(rows);
 		return new APIResponse<Map<String, Object>>(cube.getStats(), info, startTs);
 	}
 }
