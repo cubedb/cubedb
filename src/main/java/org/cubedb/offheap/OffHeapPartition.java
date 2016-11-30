@@ -37,6 +37,8 @@ import com.esotericsoftware.kryo.io.Output;
 
 public class OffHeapPartition implements Partition {
 
+	private final static int FAKE_GROUP_VALUE_ID = 0;
+
 	protected Map<String, Lookup> lookups;
 	protected Lookup fieldLookup;
 	protected Lookup metricLookup;
@@ -296,29 +298,26 @@ public class OffHeapPartition implements Partition {
 
 	}
 
-	protected long[][][] initSideCounters() {
+	protected long[][][][] initSideCounters() {
 		// log.debug("Metrics look like this: {}",
 		// (Object)this.metricLookup.getKeys());
-		final long[][][] out = new long[this.fieldLookup.size()][][];
+		final long[][][][] out = new long[this.fieldLookup.size()][][][];
 		for (int i = 0; i < this.fieldLookup.size(); i++) {
 			String fieldName = this.fieldLookup.getKey(i);
 			Lookup side = this.lookups.get(fieldName);
-			long[][] sideCounters = new long[side.size()][this.metricLookup.size()];
+			long[][][] sideCounters = new long[side.size()][1][this.metricLookup.size()];
 			for (int s = 0; s < sideCounters.length; s++)
 				for (int m = 0; m < this.metricLookup.size(); m++)
-					sideCounters[s][m] = 0l;
+					sideCounters[s][FAKE_GROUP_VALUE_ID][m] = 0l;
 			out[i] = sideCounters;
 		}
 		// log.debug("Initial counters look like this {}", (Object)out);
 		return out;
 	}
 
-	protected long[][][][] initGroupedSideCounters(final int groupFieldId) {
+	protected long[][][][] initGroupedSideCounters(final String groupFieldName) {
 		final long[][][][] out = new long[this.fieldLookup.size()][][][];
-		final String groupFieldName = this.fieldLookup.getKey(groupFieldId);
 		final Lookup groupSide = this.lookups.get(groupFieldName);
-		// log.debug("Group side field name, values: {}, {}",
-		// 		  groupFieldName, groupSide.size());
 		for (int f = 0; f < this.fieldLookup.size(); f++) {
 			String fieldName = this.fieldLookup.getKey(f);
 			Lookup side = this.lookups.get(fieldName);
@@ -329,7 +328,6 @@ public class OffHeapPartition implements Partition {
 						sideCounters[s][g][m] = 0l;
 			out[f] = sideCounters;
 		}
-		// log.debug("Grouped counters look like this {}", (Object)out);
 		return out;
 	}
 
@@ -342,70 +340,13 @@ public class OffHeapPartition implements Partition {
 		return columns;
 	}
 
-	protected SearchResult convertToResult(long[][][] sideCounters, long[][][][] groupedSideCounters, long[] totalCounters) {
-		final Map<SearchResultRow, Long> result = new HashMap<SearchResultRow, Long>();
-		for (int i = 0; i < sideCounters.length; i++) {
-			String sideName = this.fieldLookup.getKey(i);
-			final Lookup sideLookup = this.lookups.get(sideName);
-			for (int j = 0; j < sideCounters[i].length; j++) {
-				String sideValue = sideLookup.getKey(j);
-				for (int m = 0; m < sideCounters[i][j].length; m++) {
-					String metricName = this.metricLookup.getKey(m);
-					SearchResultRow r = new SearchResultRow();
-					r.setFieldName(sideName);
-					r.setFieldValue(sideValue);
-					r.setMetricName(metricName);
-					result.put(r, sideCounters[i][j][m]);
-				}
-			}
-
-		}
-
-		final Map<GroupedSearchResultRow, Long> groupedResult = new HashMap<GroupedSearchResultRow, Long>();
-		// TODO:
-		final String groupSideName = this.fieldLookup.getKey(0);
-		final Lookup groupSideLookup = this.lookups.get(groupSideName);
-		for (int i = 0; i < groupedSideCounters.length; i++) {
-			String sideName = this.fieldLookup.getKey(i);
-			final Lookup sideLookup = this.lookups.get(sideName);
-			for (int j = 0; j < groupedSideCounters[i].length; j++) {
-				String sideValue = sideLookup.getKey(j);
-				for (int g = 0; g < groupedSideCounters[i][j].length; g++) {
-					String groupSideValue = groupSideLookup.getKey(g);
-					for (int m = 0; m < groupedSideCounters[i][j][g].length; m++) {
-						String metricName = this.metricLookup.getKey(m);
-						GroupedSearchResultRow r = new GroupedSearchResultRow();
-						r.setGroupFieldName(groupSideName);
-						r.setGroupFieldValue(groupSideValue);
-						r.setFieldName(sideName);
-						r.setFieldValue(sideValue);
-						r.setMetricName(metricName);
-						groupedResult.put(r, groupedSideCounters[i][j][g][m]);
-					}
-				}
-			}
-		}
-
-		Map<String, Long> totalCounts = new HashMap<String, Long>(totalCounters.length);
-		for (int i = 0; i < totalCounters.length; i++)
-			totalCounts.put(this.metricLookup.getKey(i), totalCounters[i]);
-		// log.debug("Converted {} to {}", sideCounters, result);
-		return new SearchResult(result, groupedResult, totalCounts);
-	}
-
-	protected SearchResult getEmptySearchResult() {
-		Map<String, Long> totalCounts = new HashMap<String, Long>();
-		for (String metricName : this.metrics.keySet()) {
-			totalCounts.put(metricName, 0l);
-		}
-		SearchResult r = new SearchResult(new HashMap<SearchResultRow, Long>(),
-										  new HashMap<GroupedSearchResultRow, Long>(),
-										  totalCounts);
-		return r;
+	@Override
+	public SearchResult get(List<Filter> filters) {
+		return get(filters, null);
 	}
 
 	@Override
-	public SearchResult get(List<Filter> filters) {
+	public SearchResult get(List<Filter> filters, String groupFieldName) {
 		// log.debug("Starting search");
 		long t0 = System.nanoTime(); // debug purposes
 		int curSize = size; // current max index of rows in the db
@@ -415,13 +356,22 @@ public class OffHeapPartition implements Partition {
 		final String[] metricNames = this.metricLookup.getKeys();
 		final long[] totalCounters = new long[metricNames.length];
 
-		// field names -> (column value id -> (metric name -> counter))
-		final long[][][] sideCounters = initSideCounters();
 
 		// a field to use for result grouping
-		final int groupFieldId = 0;
+		final boolean doFieldGrouping = groupFieldName != null;
+		final int groupFieldId;
 		// field names -> (column value id -> (group value id -> (metric name -> counter)))
-		final long[][][][] groupedSideCounters = initGroupedSideCounters(groupFieldId);
+		final long[][][][] sideCounters;
+
+		// when field grouping is required we basically just use a single-value
+		// array for the groupValueId array
+		if (doFieldGrouping) {
+			groupFieldId = fieldLookup.getValue(groupFieldName);
+			sideCounters = initGroupedSideCounters(groupFieldName);
+		} else {
+			groupFieldId = FAKE_GROUP_VALUE_ID;
+			sideCounters = initSideCounters();
+		}
 
 		final Column[] columns = getColumnsAsArray();
 
@@ -486,12 +436,6 @@ public class OffHeapPartition implements Partition {
 
 			t2 = System.nanoTime();
 			for (int i = 0; i < curSize; i++) {
-
-				/*
-				 * Find out the value of the field to group by.
-				 */
-				final int groupFieldValueId = columns[groupFieldId].get(i);
-
 				/*
 				 * Here we do not retrieve values of all columns. We only get
 				 * those which are related to a filter/matcher
@@ -530,6 +474,11 @@ public class OffHeapPartition implements Partition {
 					}
 
 					/*
+					 * Find out the value of the field to group by for the i-th row.
+					 */
+					final int groupFieldValueId = doFieldGrouping ? columns[groupFieldId].get(i): FAKE_GROUP_VALUE_ID;
+
+					/*
 					 * Last, retrieve the values of all columns. For each side,
 					 * we increment the side counter, but only when *other* side
 					 * filters match.
@@ -543,10 +492,10 @@ public class OffHeapPartition implements Partition {
 						if (!checkOtherMatch(columnMatches, fieldId)) {
 							continue;
 						}
+
 						final int columnValueId = columnValues[fieldId];
 						for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-							sideCounters[fieldId][columnValueId][mIndex] += metricValues[mIndex];
-							groupedSideCounters[fieldId][columnValueId][groupFieldValueId][mIndex] += metricValues[mIndex];
+							sideCounters[fieldId][columnValueId][groupFieldValueId][mIndex] += metricValues[mIndex];
 						}
 					}
 				}
@@ -555,9 +504,13 @@ public class OffHeapPartition implements Partition {
 
 		} catch (ColumnDoesNotExistException e) {
 			log.warn(e.getMessage());
-			return getEmptySearchResult();
+			return SearchResult.buildEmpty(metrics.keySet());
 		}
-		final SearchResult result = convertToResult(sideCounters, groupedSideCounters, totalCounters);
+		final SearchResult result = SearchResult.buildFromResultArray(
+			  sideCounters, totalCounters,
+			  doFieldGrouping, groupFieldName,
+			  lookups, fieldLookup, metricLookup
+		);
 		final long t1 = System.nanoTime();
 		// log.debug("Got {} matches for the query in {}ms among {} rows",
 		// matchCount, (t1 - t0) / 1000000.0, curSize);

@@ -19,6 +19,7 @@ import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.SearchResult;
 import org.cubedb.core.beans.SearchResultRow;
+import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.offheap.OffHeapPartition;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -34,6 +35,12 @@ public class OffHeapPartitionTest {
 
 	public OffHeapPartition createPartition() {
 		return new OffHeapPartition();
+	}
+
+	public GroupedSearchResultRow createRow(String name, String value, String metric) {
+		return new GroupedSearchResultRow(
+			SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_VALUE, name, value, metric
+		);
 	}
 
 	@Test
@@ -161,8 +168,7 @@ public class OffHeapPartitionTest {
 		p.insertData(data);
 		SearchResult result = p.get(new ArrayList<Filter>());
 		assertEquals(2, result.getResults().size());
-		assertEquals(1l, result.getResults().get(new SearchResultRow("f1", "f1_value_0", "c")).longValue());
-
+		assertEquals(1l, result.getResults().get(createRow("f1", "f1_value_0", "c")).longValue());
 	}
 
 	@Test
@@ -173,12 +179,15 @@ public class OffHeapPartitionTest {
 		data.add(TestUtils.genDataRow("f1", "v2", "f2", "v1"));
 		data.add(TestUtils.genDataRow("f1", "v2", "f2", "v1"));
 		p.insertData(data);
-		SearchResult result = p.get(new ArrayList<Filter>());
-		log.debug("results with grouped: {}", result);
+
+		// log.debug("results with grouped: {}", result);
 		// 2 + null values for f1, 1 + null values for f2
+		SearchResult result = p.get(new ArrayList<Filter>());
 		assertEquals(5, result.getResults().size());
+
+		result = p.get(new ArrayList<Filter>(), "f1");
 		// non-grouped results * (2 grouping values + null)
-		assertEquals(15, result.getGroupedResults().size());
+		assertEquals(15, result.getResults().size());
 	}
 
 	@Test
@@ -369,8 +378,8 @@ public class OffHeapPartitionTest {
 		SearchResult result = p.get(TestUtils.getFilterFor("f1", "v2"));
 		long firstColumnCount = 0;
 		long secondColumnCount = 0;
-		for (Entry<SearchResultRow, Long> e : result.getResults().entrySet()) {
-			SearchResultRow row = e.getKey();
+		for (Entry<GroupedSearchResultRow, Long> e : result.getResults().entrySet()) {
+			GroupedSearchResultRow row = e.getKey();
 			log.info("{}={}", row, e.getValue());
 			if (row.getFieldName().equals("f1")) {
 				firstColumnCount += e.getValue();
@@ -380,14 +389,13 @@ public class OffHeapPartitionTest {
 			}
 		}
 		//log.info("Found {} results", firstColumnCount);
-		assertEquals(0l, result.getResults().get(new SearchResultRow("f3", "v2", "c")).longValue());
-		assertEquals(1l, result.getResults().get(new SearchResultRow("f3", "v1", "c")).longValue());
+		assertEquals(0l, result.getResults().get(createRow("f3", "v2", "c")).longValue());
+		assertEquals(1l, result.getResults().get(createRow("f3", "v1", "c")).longValue());
 		assertEquals(4l, firstColumnCount);
 		assertEquals(1l, secondColumnCount);
-
 		assertEquals(2l, p.get(TestUtils.getFilterFor("f3", "v1"))
-				.getResults()
-				.get(new SearchResultRow("f1", "v1", "c")).longValue());
+					 .getResults()
+					 .get(createRow("f1", "v1", "c")).longValue());
 	}
 
 	@Test
