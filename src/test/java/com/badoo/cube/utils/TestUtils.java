@@ -29,7 +29,6 @@ import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.SearchResult;
-import org.cubedb.core.beans.SearchResultRow;
 import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.offheap.OffHeapPartition;
 import org.slf4j.Logger;
@@ -161,9 +160,7 @@ public class TestUtils {
 		log.info("Checking match for {}={}", field, value);
 		List<Filter> f = getFilterFor(field, value);
 		Map<GroupedSearchResultRow, Long> result = p.get(f).getResults();
-		GroupedSearchResultRow row = new GroupedSearchResultRow(
-			SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_VALUE, field, value, metric
-		);
+		GroupedSearchResultRow row = new GroupedSearchResultRow(field, value, metric);
 		Long count = result.get(row);
 		return count == null ? 0 : count.longValue();
 	}
@@ -180,9 +177,7 @@ public class TestUtils {
 		for (int i = 0; i < fieldsAndValues.length; i += 2) {
 			String field = fieldsAndValues[i];
 			String value = fieldsAndValues[i + 1];
-			GroupedSearchResultRow row = new GroupedSearchResultRow(
-				SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_VALUE, field, value, metric
-			);
+			GroupedSearchResultRow row = new GroupedSearchResultRow(field, value, metric);
 			resultCount += result.get(row).longValue();
 		}
 		return resultCount;
@@ -328,8 +323,15 @@ public class TestUtils {
 
 	public static void ensureSidesAddUp(Map<GroupedSearchResultRow,Long> result)
 	{
-		Map<String, LongSummaryStatistics> sideTotals = result.entrySet().stream().collect(Collectors.groupingBy(e -> e.getKey().getFieldName(), Collectors.summarizingLong(e-> e.getValue().longValue())));
-		int numDistinctValues =  sideTotals.values().stream().map(LongSummaryStatistics::getSum).distinct().collect(Collectors.toList()).size();
+		Map<String, LongSummaryStatistics> sideTotals = result.entrySet()
+			.stream()
+			.collect(Collectors.groupingBy(e -> e.getKey().getFieldName(),
+										   Collectors.summarizingLong(e-> e.getValue().longValue())));
+		int numDistinctValues = sideTotals.values()
+			.stream()
+			.map(LongSummaryStatistics::getSum)
+			.distinct()
+			.collect(Collectors.toList()).size();
 		if(numDistinctValues!=1)
 		{
 			log.error("Sides do not add up");

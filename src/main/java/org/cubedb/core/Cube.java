@@ -8,13 +8,13 @@ import java.util.TreeSet;
 
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
-import org.cubedb.core.beans.SearchResultRow;
+import org.cubedb.core.beans.GroupedSearchResultRow;
 
 public interface Cube {
 	void insert(List<DataRow> data);
-	Map<SearchResultRow, Long> get(
+	Map<GroupedSearchResultRow, Long> get(
 			String fromPartition, String toPartition, List<Filter> filters);
-	Map<SearchResultRow, Long> get(
+	Map<GroupedSearchResultRow, Long> get(
 			int lastRange, List<Filter> filters);
 	int getNumRecords();
 	void deletePartition(String partitionName);

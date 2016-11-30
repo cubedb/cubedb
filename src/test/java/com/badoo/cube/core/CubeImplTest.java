@@ -13,7 +13,7 @@ import org.cubedb.core.Cube;
 import org.cubedb.core.CubeImpl;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
-import org.cubedb.core.beans.SearchResultRow;
+import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,7 +114,7 @@ public class CubeImplTest {
 		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>()));
 		for (int i = 0; i < 10; i++) {
 			t0 = System.nanoTime();
-			Map<SearchResultRow, Long> result = cube.get("p_1000", "p_" + (1100 + numPartitions),
+			Map<GroupedSearchResultRow, Long> result = cube.get("p_1000", "p_" + (1100 + numPartitions),
 					TestUtils.getFilterFor("f_1", "f_1_1"));
 			// Map<SearchResultRow, Long> result = cube.get("p_0", "p_" + (1100
 			// + numPartitions), new ArrayList<Filter>());
@@ -139,7 +139,7 @@ public class CubeImplTest {
 			}
 
 			@Override
-			public Map<SearchResultRow, Long> get(final String fromPartition, final String toPartition,
+			public Map<GroupedSearchResultRow, Long> get(final String fromPartition, final String toPartition,
 					List<Filter> filters) {
 				assertEquals("p_" + (1000 + numPartitions - lastCount), fromPartition);
 				assertEquals("p_" + (1000 + numPartitions - 1), toPartition);

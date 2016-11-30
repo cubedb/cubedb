@@ -38,9 +38,7 @@ public class OffHeapPartitionTest {
 	}
 
 	public GroupedSearchResultRow createRow(String name, String value, String metric) {
-		return new GroupedSearchResultRow(
-			SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_VALUE, name, value, metric
-		);
+		return new GroupedSearchResultRow(name, value, metric);
 	}
 
 	@Test

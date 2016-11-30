@@ -9,6 +9,12 @@ public class GroupedSearchResultRow extends SearchResultRow {
 		super();
 	}
 
+	public GroupedSearchResultRow(String fieldName, String fieldValue, String metricName) {
+		super(fieldName, fieldValue, metricName);
+		this.groupFieldName = SearchResult.FAKE_GROUP_FIELD_NAME;
+		this.groupFieldValue = SearchResult.FAKE_GROUP_VALUE;
+	}
+
 	public GroupedSearchResultRow(String groupFieldName, String groupFieldValue, String fieldName, String fieldValue, String metricName) {
 		super(fieldName, fieldValue, metricName);
 		this.groupFieldName = groupFieldName;

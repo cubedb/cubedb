@@ -19,7 +19,6 @@ import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.SearchResult;
-import org.cubedb.core.beans.SearchResultRow;
 import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.core.lookups.HashMapLookup;
 import org.cubedb.core.lookups.Lookup;
