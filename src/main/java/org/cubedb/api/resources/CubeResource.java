@@ -62,7 +62,8 @@ public class CubeResource {
 
 	@GET
 	@Path("/{cubeName}/last/{range}/group_by/{groupBy}")
-	public APIResponse<Map<String, Map<String, Map<String, Long>>>> get(@PathParam("cubeName") String cubeName,
+	public APIResponse<Map<String, Map<String, Map<String, Map<String, Map<String, Long>>>>>>
+		get(@PathParam("cubeName") String cubeName,
 			@PathParam("range") int range, @PathParam("groupBy") String groupBy, @Context UriInfo info) {
 		final long startTime = System.currentTimeMillis();
 		final MultivaluedMap<String, String> filterCriterias = info.getQueryParameters();
@@ -73,8 +74,8 @@ public class CubeResource {
 		}
 
 		Map<GroupedSearchResultRow, Long> result = cube.get(cubeName, range, buildFilters(filterCriterias), groupBy);
-		return new APIResponse<Map<String, Map<String, Map<String, Long>>>>(CubeUtils.searchResultsToMap(result), info,
-				startTime);
+		return new APIResponse<Map<String, Map<String, Map<String, Map<String, Map<String, Long>>>>>>(
+			CubeUtils.searchResultsToGroupedMap(result), info, startTime);
 	}
 
 	private List<Filter> buildFilters(MultivaluedMap<String, String> filterCriterias) {
