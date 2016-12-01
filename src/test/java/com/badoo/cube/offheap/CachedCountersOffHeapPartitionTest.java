@@ -17,12 +17,12 @@ import com.badoo.cube.utils.TestUtils;
 
 public class CachedCountersOffHeapPartitionTest extends OffHeapPartitionTest{
 
-	public OffHeapPartition createPartition(){
+	public OffHeapPartition createPartition() {
 		return new CachedCountersOffHeapPartition();
 	}
 
 	@Test
-	public void testNullValuesAfterInit(){
+	public void testNullValuesAfterInit() {
 		Partition p = createPartition();
 		GroupedSearchResultRow r = new GroupedSearchResultRow("null_field", "null", "c");
 		GroupedSearchResultRow notNullR = new GroupedSearchResultRow("not_null", "null", "c");
@@ -33,6 +33,11 @@ public class CachedCountersOffHeapPartitionTest extends OffHeapPartitionTest{
 		assertEquals(1l, first.getResults().get(r).longValue());
 		assertEquals(2l, second.getResults().get(r).longValue());
 		assertEquals(1l, second.getResults().get(notNullR).longValue());
+	}
 
+	@Override
+	@Test
+	public void testGroupedGet() {
+		// Override as grouped partitions cannot not be cached
 	}
 }
