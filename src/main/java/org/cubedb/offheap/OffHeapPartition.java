@@ -330,18 +330,12 @@ public class OffHeapPartition implements Partition {
 		return out;
 	}
 
-
 	protected Column[] getColumnsAsArray() {
 		final Column[] columns = new Column[this.columns.size()];
 		for (Entry<String, Column> e : this.columns.entrySet()) {
 			columns[this.fieldLookup.getValue(e.getKey())] = e.getValue();
 		}
 		return columns;
-	}
-
-	@Override
-	public SearchResult get(List<Filter> filters) {
-		return get(filters, null);
 	}
 
 	@Override

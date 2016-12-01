@@ -159,7 +159,7 @@ public class TestUtils {
 	public static long checkMatch(OffHeapPartition p, String field, String value, String metric) {
 		log.info("Checking match for {}={}", field, value);
 		List<Filter> f = getFilterFor(field, value);
-		Map<GroupedSearchResultRow, Long> result = p.get(f).getResults();
+		Map<GroupedSearchResultRow, Long> result = p.get(f, null).getResults();
 		GroupedSearchResultRow row = new GroupedSearchResultRow(field, value, metric);
 		Long count = result.get(row);
 		return count == null ? 0 : count.longValue();
@@ -172,7 +172,7 @@ public class TestUtils {
 			String value = fieldsAndValues[i + 1];
 			filters.add(getFilterFor(field, value).get(0));
 		}
-		Map<GroupedSearchResultRow, Long> result = p.get(filters).getResults();
+		Map<GroupedSearchResultRow, Long> result = p.get(filters, null).getResults();
 		long resultCount = 0l;
 		for (int i = 0; i < fieldsAndValues.length; i += 2) {
 			String field = fieldsAndValues[i];

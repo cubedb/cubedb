@@ -164,7 +164,7 @@ public class OffHeapPartitionTest {
 		OffHeapPartition p = createPartition();
 		List<DataRow> data = TestUtils.genSimpleData("f1", "c", 1);
 		p.insertData(data);
-		SearchResult result = p.get(new ArrayList<Filter>());
+		SearchResult result = p.get(new ArrayList<Filter>(), null);
 		assertEquals(2, result.getResults().size());
 		assertEquals(1l, result.getResults().get(createRow("f1", "f1_value_0", "c")).longValue());
 	}
@@ -180,7 +180,7 @@ public class OffHeapPartitionTest {
 
 		// log.debug("results with grouped: {}", result);
 		// 2 + null values for f1, 1 + null values for f2
-		SearchResult result = p.get(new ArrayList<Filter>());
+		SearchResult result = p.get(new ArrayList<Filter>(), null);
 		assertEquals(5, result.getResults().size());
 
 		result = p.get(new ArrayList<Filter>(), "f1");
@@ -271,7 +271,7 @@ public class OffHeapPartitionTest {
 		assertEquals(0, TestUtils.checkMatch(p, "non_existant_column_f_1", "non_existant_test_field", "c"));
 		SearchResult result = null;
 		for (int i = 0; i < 10; i++) {
-			result = p.get(new ArrayList<Filter>());
+			result = p.get(new ArrayList<Filter>(), null);
 		}
 		long c = result.getResults().values().stream().mapToLong(Long::longValue).sum();
 		assertTrue(0 < c);
@@ -288,7 +288,7 @@ public class OffHeapPartitionTest {
 		class Searcher implements Runnable {
 			@Override
 			public void run() {
-				p.get(new ArrayList<Filter>());
+				p.get(new ArrayList<Filter>(), null);
 			}
 		}
 
@@ -321,7 +321,7 @@ public class OffHeapPartitionTest {
 		class Searcher implements Runnable {
 			@Override
 			public void run() {
-				p.get(f);
+				p.get(f, null);
 			}
 		}
 
@@ -373,7 +373,7 @@ public class OffHeapPartitionTest {
 		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v2", "f3", "v2"));
 
 
-		SearchResult result = p.get(TestUtils.getFilterFor("f1", "v2"));
+		SearchResult result = p.get(TestUtils.getFilterFor("f1", "v2"), null);
 		long firstColumnCount = 0;
 		long secondColumnCount = 0;
 		for (Entry<GroupedSearchResultRow, Long> e : result.getResults().entrySet()) {
@@ -391,7 +391,7 @@ public class OffHeapPartitionTest {
 		assertEquals(1l, result.getResults().get(createRow("f3", "v1", "c")).longValue());
 		assertEquals(4l, firstColumnCount);
 		assertEquals(1l, secondColumnCount);
-		assertEquals(2l, p.get(TestUtils.getFilterFor("f3", "v1"))
+		assertEquals(2l, p.get(TestUtils.getFilterFor("f3", "v1"), null)
 					 .getResults()
 					 .get(createRow("f1", "v1", "c")).longValue());
 	}
@@ -400,7 +400,7 @@ public class OffHeapPartitionTest {
 	public void insertNullTest(){
 		OffHeapPartition p = createPartition();
 		p.insert(TestUtils.genDataRow("not_null", "1", "null", null));
-		p.get(TestUtils.getFilterFor("null", null));
+		p.get(TestUtils.getFilterFor("null", null), null);
 	}
 
 	@Test
@@ -462,17 +462,17 @@ public class OffHeapPartitionTest {
 	{
 		Partition p = createPartition();
 		p.insert(TestUtils.genDataRow("f1", "v1"));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v1"));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("f1", "v1"));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("f1", "v1", "f3", null));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("f1", "v1"));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("new_field", null));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 	}
 
 	@Test
@@ -484,14 +484,14 @@ public class OffHeapPartitionTest {
 
 		for(DataRow r: TestUtils.genMultiColumnData("f1", numColumns, numValues))
 			p.insert(r);
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		for(DataRow r: TestUtils.genMultiColumnData("f1", numColumns+1, numValues))
 			p.insert(r);
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		for(DataRow r: TestUtils.genMultiColumnData("f1", numColumns+1, numValues+1))
 			p.insert(r);
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("new_field", null));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 	}
 }
