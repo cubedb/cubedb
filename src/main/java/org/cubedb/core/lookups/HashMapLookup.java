@@ -29,7 +29,7 @@ public class HashMapLookup implements Lookup {
 	public HashMapLookup(boolean needNull) {
 		init(needNull);
 	}
-	
+
 	protected void init(boolean needNull)
 	{
 		this.m = new TObjectIntHashMap<String>(8);
@@ -48,14 +48,14 @@ public class HashMapLookup implements Lookup {
 	public synchronized int getValue(String key) {
 		if(key==null)
 			key=Constants.NULL_VALUE;
-		int val = m.get(key);
+		int val;
 		if (!m.containsKey(key)) {
-					val = m.size();
-					Objects.requireNonNull(key);
-					m.put(key, val);
-					//log.debug("Adding key {} to the dictionary as {}", key, val);
-					this.keys.add(key);
-			
+			val = m.size();
+			Objects.requireNonNull(key);
+			m.put(key, val);
+			keys.add(key);
+		} else {
+			val = m.get(key);
 		}
 		return val;
 	}
