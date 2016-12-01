@@ -62,8 +62,14 @@ public class CubeResourceTest {
 			out.put(new GroupedSearchResultRow("fieldName", "fieldValue", "metricName"), 1l);
 			return out;
 		}
-	}
 
+		@Override
+		public Map<GroupedSearchResultRow, Long> get(String cubeName, int lastNum, List<Filter> filters, String groupedBy) {
+			Map<GroupedSearchResultRow, Long> out = new HashMap<GroupedSearchResultRow, Long>();
+			out.put(new GroupedSearchResultRow("fieldName", "fieldValue", "metricName"), 1l);
+			return out;
+		}
+	}
 
 	@Before
 	public void setup() throws Exception {
@@ -99,14 +105,22 @@ public class CubeResourceTest {
 				response, new GenericType<APIResponse<Map<String, Map<String, Map<String, Long>>>>>(){}
 			);
 	    assertTrue(out.response.size()==1);
-	    // System.out.println("Response: " + response);
-	    // System.out.println("Response: " + out);
-	    //System.out.println(response.getEntity().toString());
+	}
+
+	@Test
+	public void testGetGrouped() {
+	    String response = webTarget.path("v1/cubeName/last/120/group_by/field_name")
+			.request().get(String.class);
+	    APIResponse<Map<String, Map<String, Map<String, Map<String, Map<String, Long>>>>>> out =
+			new Genson().deserialize(
+				response,
+				new GenericType<APIResponse<Map<String, Map<String, Map<String, Map<String, Map<String, Long>>>>>>>(){}
+			);
+	    assertTrue(out.response.size()==1);
 	}
 
 	@Test
 	public void testGetNonExistantCube() {
-	    //Response r = null;
 	    Response r = webTarget.path("v1/invalid/last/120")
 			.request().get();
 	    assertEquals(404, r.getStatus());
