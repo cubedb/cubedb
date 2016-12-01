@@ -95,8 +95,6 @@ public class CubeResourceTest {
 
 	@Test
 	public void testGet() {
-	    //Response r = null;
-
 	    String response = webTarget.path("v1/cubeName/last/120")
 			.queryParam("h", "1")
 			.request().get(String.class);// .get();
@@ -124,16 +122,11 @@ public class CubeResourceTest {
 	    Response r = webTarget.path("v1/invalid/last/120")
 			.request().get();
 	    assertEquals(404, r.getStatus());
-
-	    //assertTrue(exceptionRaised);
-	    //System.out.println(response.getEntity().toString());
 	}
 
 	@Test
 	public void testInsert() {
-		//Response r = null;
 		List<DataRow> data = TestUtils.genSimpleData("cubeName", "p", "f", "c", 100);
-		// log.info(new Genson().serialize(data));
 		Entity<List<DataRow>> entity = Entity.entity(data, MediaType.APPLICATION_JSON_TYPE);
 		String r = webTarget.path("v1/insert")
 			.request().post(entity,String.class);
@@ -141,7 +134,5 @@ public class CubeResourceTest {
 		APIResponse<Map<String, Integer>> out = new Genson().deserialize(
 			r, new GenericType<APIResponse<Map<String, Integer>>>(){}
 		);
-		//assertTrue(exceptionRaised);
-		// log.info("{}", out);
 	}
 }
