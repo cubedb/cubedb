@@ -35,26 +35,26 @@ import com.owlike.genson.GenericType;
 import com.owlike.genson.Genson;
 
 public class CubeResourceTest {
-	  private HttpServer httpServer;
-	  private WebTarget webTarget;
-	  private static final URI baseUri = URI.create("http://localhost:9090/rest/");
+	private HttpServer httpServer;
+	private WebTarget webTarget;
+	private static final URI baseUri = URI.create("http://localhost:9090/rest/");
 
-	  public static final Logger log = LoggerFactory.getLogger(CubeResourceTest.class);
-
-
-	  public static class MultiCubeTest extends MultiCubeImpl{
+	public static final Logger log = LoggerFactory.getLogger(CubeResourceTest.class);
 
 
-		  public MultiCubeTest(String savePath) {
+	public static class MultiCubeTest extends MultiCubeImpl{
+
+
+		public MultiCubeTest(String savePath) {
 			super(savePath);
 			// TODO Auto-generated constructor stub
 		}
 
 		@Override
-		  public boolean hasCube(String cubeName)
-		  {
-			  return !cubeName.equals("invalid");
-		  }
+		public boolean hasCube(String cubeName)
+		{
+			return !cubeName.equals("invalid");
+		}
 
 		@Override
 		public Map<GroupedSearchResultRow, Long> get(String cubeName, int lastNum, List<Filter> filters) {
@@ -62,11 +62,11 @@ public class CubeResourceTest {
 			out.put(new GroupedSearchResultRow("fieldName", "fieldValue", "metricName"), 1l);
 			return out;
 		}
-	  }
+	}
 
 
-	  @Before
-	  public void setup() throws Exception {
+	@Before
+	public void setup() throws Exception {
 	    //create ResourceConfig from Resource class
 	    ResourceConfig rc = new ResourceConfig();
 	    MultiCube cube = new MultiCubeTest(null);
@@ -80,49 +80,54 @@ public class CubeResourceTest {
 	    //configure client with the base URI path
 	    Client client = ClientBuilder.newClient();
 	    webTarget = client.target(baseUri);
-	  }
+	}
 
-	  @After
-	  public void tearDown() throws Exception {
-	     httpServer.shutdown();
-	  }
+	@After
+	public void tearDown() throws Exception {
+		httpServer.shutdown();
+	}
 
-	  @Test
-	  public void testGet() {
+	@Test
+	public void testGet() {
 	    //Response r = null;
 
 	    String response = webTarget.path("v1/cubeName/last/120")
-	    		.queryParam("h", "1")
-				.request().get(String.class);// .get();
-	    APIResponse<Map<String, Map<String, Map<String, Long>>>> out = new Genson().deserialize(response, new GenericType<APIResponse<Map<String, Map<String, Map<String, Long>>>>>(){});
+			.queryParam("h", "1")
+			.request().get(String.class);// .get();
+	    APIResponse<Map<String, Map<String, Map<String, Long>>>> out =
+			new Genson().deserialize(
+				response, new GenericType<APIResponse<Map<String, Map<String, Map<String, Long>>>>>(){}
+			);
 	    assertTrue(out.response.size()==1);
 	    // System.out.println("Response: " + response);
 	    // System.out.println("Response: " + out);
 	    //System.out.println(response.getEntity().toString());
-	  }
+	}
 
-	  @Test
-	  public void testGetNonExistantCube() {
+	@Test
+	public void testGetNonExistantCube() {
 	    //Response r = null;
 	    Response r = webTarget.path("v1/invalid/last/120")
-	    		.request().get();
+			.request().get();
 	    assertEquals(404, r.getStatus());
 
 	    //assertTrue(exceptionRaised);
 	    //System.out.println(response.getEntity().toString());
-	  }
+	}
 
-	  @Test
-	  public void testInsert() {
-		  //Response r = null;
-		  List<DataRow> data = TestUtils.genSimpleData("cubeName", "p", "f", "c", 100);
-		  // log.info(new Genson().serialize(data));
-		  Entity<List<DataRow>> entity = Entity.entity(data, MediaType.APPLICATION_JSON_TYPE);
-		  String r = webTarget.path("v1/insert")
-				.request().post(entity,String.class);
+	@Test
+	public void testInsert() {
+		//Response r = null;
+		List<DataRow> data = TestUtils.genSimpleData("cubeName", "p", "f", "c", 100);
+		// log.info(new Genson().serialize(data));
+		Entity<List<DataRow>> entity = Entity.entity(data, MediaType.APPLICATION_JSON_TYPE);
+		String r = webTarget.path("v1/insert")
+			.request().post(entity,String.class);
 
-		  APIResponse<Map<String, Integer>> out = new Genson().deserialize(r, new GenericType<APIResponse<Map<String, Integer>>>(){});
-		  //assertTrue(exceptionRaised);
-		  // log.info("{}", out);
-	  }
+		APIResponse<Map<String, Integer>> out = new Genson().deserialize(
+			r, new GenericType<APIResponse<Map<String, Integer>>>(){}
+		);
+		//assertTrue(exceptionRaised);
+		// log.info("{}", out);
+	}
 }
