@@ -105,7 +105,7 @@ public class HashMapLookup implements Lookup {
 		return this.keys.get(id);
 
 	}
-	
+
 	@Override
 	public void write(Kryo kryo, Output output) {
 		int numKeys = this.keys.size();

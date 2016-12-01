@@ -42,7 +42,7 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 
 	protected synchronized void initializeCounters() {
 		log.info("Initializing counters");
-		SearchResult r = super.get(new ArrayList<Filter>());
+		SearchResult r = super.get(new ArrayList<Filter>(), null);
 		this.counters = new HashMap<String, Map<String, Map<String, MutableLong>>>();
 		this.totalCounters = new HashMap<String, MutableLong>();
 		for (Entry<GroupedSearchResultRow, Long> e : r.getResults().entrySet()) {
@@ -133,7 +133,7 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 	}
 
 	@Override
-	public SearchResult get(List<Filter> filters) {
+	public SearchResult get(List<Filter> filters, String groupBy) {
 		if (filters.size() == 0) {
 			if (counters == null) {
 				this.initializeCounters();
@@ -163,7 +163,7 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 			final SearchResult result = new SearchResult(results, c);
 			return result;
 		}
-		return super.get(filters);
+		return super.get(filters, groupBy);
 	}
 
 	@Override

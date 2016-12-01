@@ -27,9 +27,9 @@ public class CachedCountersOffHeapPartitionTest extends OffHeapPartitionTest{
 		GroupedSearchResultRow r = new GroupedSearchResultRow("null_field", "null", "c");
 		GroupedSearchResultRow notNullR = new GroupedSearchResultRow("not_null", "null", "c");
 		p.insert(TestUtils.genDataRow("not_null", "not_null", "null_field", null));
-		SearchResult first = p.get(new ArrayList<Filter>());
+		SearchResult first = p.get(new ArrayList<Filter>(), null);
 		p.insert(TestUtils.genDataRow("not_null", null, "null_field", null));
-		SearchResult second = p.get(new ArrayList<Filter>());
+		SearchResult second = p.get(new ArrayList<Filter>(), null);
 		assertEquals(1l, first.getResults().get(r).longValue());
 		assertEquals(2l, second.getResults().get(r).longValue());
 		assertEquals(1l, second.getResults().get(notNullR).longValue());
