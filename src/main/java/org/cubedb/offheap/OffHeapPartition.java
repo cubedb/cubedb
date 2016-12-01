@@ -356,11 +356,21 @@ public class OffHeapPartition implements Partition {
 		// field names -> (column value id -> (group value id -> (metric name -> counter)))
 		final long[][][][] sideCounters;
 
-		// when field grouping is required we basically just use a single-value
-		// array for the groupValueId array
-		if (doFieldGrouping) {
+		/*
+		 * When field grouping is *not required* we basically just use a
+		 * single-value array with a zero id for the groupValueId array.
+		 *
+		 * If the grouping field does not exist in the partition - just return
+		 * en empty result.
+		 *
+		 * TODO: moving the check higher? To the Cube?
+		 */
+		if (doFieldGrouping && fieldLookup.containsValue(groupFieldName)) {
 			groupFieldId = fieldLookup.getValue(groupFieldName);
 			sideCounters = initGroupedSideCounters(groupFieldName);
+		} else if (doFieldGrouping && !fieldLookup.containsValue(groupFieldName)) {
+			log.warn(String.format("Grouping column %s does not exist in this partition", groupFieldName));
+			return SearchResult.buildEmpty(metrics.keySet());
 		} else {
 			groupFieldId = FAKE_GROUP_VALUE_ID;
 			sideCounters = initSideCounters();

@@ -61,6 +61,11 @@ public class HashMapLookup implements Lookup {
 	}
 
 	@Override
+	public boolean containsValue(String key) {
+		return m.containsKey(key);
+	}
+
+	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
