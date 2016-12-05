@@ -5,19 +5,25 @@ import java.util.Map;
 
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
-import org.cubedb.core.beans.SearchResultRow;
+import org.cubedb.core.beans.GroupedSearchResultRow;
 
 public interface MultiCube {
 	public void insert(List<DataRow> data);
 
-	public Map<SearchResultRow, Long> get(String cubeName, String fromPartition, String toPartition,
+	public Map<GroupedSearchResultRow, Long> get(String cubeName, String fromPartition, String toPartition,
 			List<Filter> filters);
 
-	public Map<SearchResultRow, Long> get(String cubeName, int lastNum,
+	public Map<GroupedSearchResultRow, Long> get(String cubeName, String fromPartition, String toPartition,
+			List<Filter> filters, String groupBy);
+
+	public Map<GroupedSearchResultRow, Long> get(String cubeName, int lastNum,
 			List<Filter> filters);
-	
+
+	public Map<GroupedSearchResultRow, Long> get(String cubeName, int lastNum,
+		List<Filter> filters, String groupBy);
+
 	public boolean hasCube(String cubeName);
-	
+
 	public void save(String path);
 	public int deleteCube(String cubeName, String fromPartition, String toPartition);
 	public int deleteCube(String cubeName, int keepLastN);
@@ -27,10 +33,10 @@ public interface MultiCube {
 	public String getPath();
 
 	void load(String path);
-	
+
 	Map<String, Object> getStats();
-	
+
 	public void saveAsJson(String path);
 	public int optimize();
-	
+
 }

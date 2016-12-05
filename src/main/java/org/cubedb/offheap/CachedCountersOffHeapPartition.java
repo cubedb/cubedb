@@ -14,7 +14,7 @@ import org.cubedb.core.Constants;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.SearchResult;
-import org.cubedb.core.beans.SearchResultRow;
+import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.utils.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,10 +42,10 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 
 	protected synchronized void initializeCounters() {
 		log.info("Initializing counters");
-		SearchResult r = super.get(new ArrayList<Filter>());
+		SearchResult r = super.get(new ArrayList<Filter>(), null);
 		this.counters = new HashMap<String, Map<String, Map<String, MutableLong>>>();
 		this.totalCounters = new HashMap<String, MutableLong>();
-		for (Entry<SearchResultRow, Long> e : r.getResults().entrySet()) {
+		for (Entry<GroupedSearchResultRow, Long> e : r.getResults().entrySet()) {
 			String fieldName = e.getKey().getFieldName();
 			Objects.requireNonNull(fieldName);
 			String fieldValue = e.getKey().getFieldValue();
@@ -58,7 +58,7 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 					.computeIfAbsent(metric, k -> new MutableLong()).increment(value);
 			this.totalCounters.computeIfAbsent(metric, k -> new MutableLong()).increment(value);
 		}
-		
+
 	}
 
 	@Override
@@ -70,18 +70,18 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 
 		this.updateCounters(row);
 	}
-	
+
 	protected Map<String, MutableLong> copyCountersFromTotal(Set<Entry<String, Long>> metricsEntrySet)
 	{
 		Map<String, MutableLong> counters = new HashMap<String, MutableLong>();
 		for (Entry<String, Long> m : metricsEntrySet) {
-			counters.put(m.getKey(), 
+			counters.put(m.getKey(),
 					new MutableLong(this.totalCounters.computeIfAbsent(m.getKey(), (kk) -> new MutableLong()).get())
 					);
 		}
 		return counters;
 	}
-	
+
 	protected void updateCounters(DataRow row)
 	{
 		final Set<Entry<String, Long>> metricsEntrySet = row.getCounters().entrySet();
@@ -101,7 +101,7 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 						//log.debug("Adding {}->{} with value {}", fieldName, Constants.NULL_VALUE, counters);
 						side.put(Constants.NULL_VALUE, counters);
 						return side;
-						
+
 						})
 					.computeIfAbsent(fieldValue, k -> new HashMap<String, MutableLong>());
 			// then we increment those metrics one by one. We create a new metric.
@@ -122,7 +122,7 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 				this.counters.get(fieldName).get(Constants.NULL_VALUE).get(m.getKey()).increment(m.getValue().longValue());
 			}
 		}
-		
+
 		for (Entry<String, Long> m : metricsEntrySet) {
 			String metricName = m.getKey();
 			long val = m.getValue().longValue();
@@ -133,14 +133,14 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 	}
 
 	@Override
-	public SearchResult get(List<Filter> filters) {
+	public SearchResult get(List<Filter> filters, String groupBy) {
 		if (filters.size() == 0) {
 			if (counters == null) {
 				this.initializeCounters();
 			}
 			// log.info("Returning cached results");
 			final Map<String, MutableLong> totalCounts = new HashMap<String, MutableLong>();
-			final Map<SearchResultRow, Long> results = new HashMap<SearchResultRow, Long>();
+			final Map<GroupedSearchResultRow, Long> results = new HashMap<GroupedSearchResultRow, Long>();
 			boolean firstSide = true;
 			for (final Entry<String, Map<String, Map<String, MutableLong>>> e : counters.entrySet()) {
 				for (final Entry<String, Map<String, MutableLong>> ee : e.getValue().entrySet()) {
@@ -148,13 +148,13 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 					for (final Entry<String, MutableLong> m : ee.getValue().entrySet()) {
 						//log.debug("m is {}", m.getKey());
 						final long val = m.getValue().get();
-						results.put(new SearchResultRow(e.getKey(), ee.getKey(), m.getKey()), val);
+						results.put(new GroupedSearchResultRow(e.getKey(), ee.getKey(), m.getKey()), val);
 						if (firstSide){
 							// we calculate totals only once
 							totalCounts.computeIfAbsent(m.getKey(), k -> new MutableLong()).increment(val);
 						}
 					}
-					
+
 				}
 				firstSide = false;
 			}
@@ -163,12 +163,12 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 			final SearchResult result = new SearchResult(results, c);
 			return result;
 		}
-		return super.get(filters);
+		return super.get(filters, groupBy);
 	}
 
 	@Override
 	public void read(Kryo kryo, Input input) {
-		
+
 		super.read(kryo, input);
 		// initializeCounters();
 	}

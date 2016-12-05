@@ -19,6 +19,7 @@ import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.SearchResult;
 import org.cubedb.core.beans.SearchResultRow;
+import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.offheap.OffHeapPartition;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -34,6 +35,10 @@ public class OffHeapPartitionTest {
 
 	public OffHeapPartition createPartition() {
 		return new OffHeapPartition();
+	}
+
+	public GroupedSearchResultRow createRow(String name, String value, String metric) {
+		return new GroupedSearchResultRow(name, value, metric);
 	}
 
 	@Test
@@ -69,7 +74,7 @@ public class OffHeapPartitionTest {
 		//TestUtils.setFinalStatic(Constants.class.getField("KEY_MAP_TTL"), oldTtl);
 		Constants.KEY_MAP_TTL = oldTtl;
 	}
-	
+
 	@Test
 	public void testInsertRepetableDataLarge() {
 		OffHeapPartition p = createPartition();
@@ -159,10 +164,28 @@ public class OffHeapPartitionTest {
 		OffHeapPartition p = createPartition();
 		List<DataRow> data = TestUtils.genSimpleData("f1", "c", 1);
 		p.insertData(data);
-		SearchResult result = p.get(new ArrayList<Filter>());
+		SearchResult result = p.get(new ArrayList<Filter>(), null);
 		assertEquals(2, result.getResults().size());
-		assertEquals(1l, result.getResults().get(new SearchResultRow("f1", "f1_value_0", "c")).longValue());
+		assertEquals(1l, result.getResults().get(createRow("f1", "f1_value_0", "c")).longValue());
+	}
 
+	@Test
+	public void testGroupedGet() {
+		OffHeapPartition p = createPartition();
+		List<DataRow> data = new ArrayList<>();
+		data.add(TestUtils.genDataRow("f1", "v1", "f2", "v1"));
+		data.add(TestUtils.genDataRow("f1", "v2", "f2", "v1"));
+		data.add(TestUtils.genDataRow("f1", "v2", "f2", "v1"));
+		p.insertData(data);
+
+		// log.debug("results with grouped: {}", result);
+		// 2 + null values for f1, 1 + null values for f2
+		SearchResult result = p.get(new ArrayList<Filter>(), null);
+		assertEquals(5, result.getResults().size());
+
+		result = p.get(new ArrayList<Filter>(), "f1");
+		// non-grouped results * (2 grouping values + null)
+		assertEquals(15, result.getResults().size());
 	}
 
 	@Test
@@ -248,7 +271,7 @@ public class OffHeapPartitionTest {
 		assertEquals(0, TestUtils.checkMatch(p, "non_existant_column_f_1", "non_existant_test_field", "c"));
 		SearchResult result = null;
 		for (int i = 0; i < 10; i++) {
-			result = p.get(new ArrayList<Filter>());
+			result = p.get(new ArrayList<Filter>(), null);
 		}
 		long c = result.getResults().values().stream().mapToLong(Long::longValue).sum();
 		assertTrue(0 < c);
@@ -265,7 +288,7 @@ public class OffHeapPartitionTest {
 		class Searcher implements Runnable {
 			@Override
 			public void run() {
-				p.get(new ArrayList<Filter>());
+				p.get(new ArrayList<Filter>(), null);
 			}
 		}
 
@@ -298,7 +321,7 @@ public class OffHeapPartitionTest {
 		class Searcher implements Runnable {
 			@Override
 			public void run() {
-				p.get(f);
+				p.get(f, null);
 			}
 		}
 
@@ -341,20 +364,20 @@ public class OffHeapPartitionTest {
 	@Test
 	public void testGetSelectiveFilterSameField() {
 		OffHeapPartition p = createPartition();
-		
+
 		//List<DataRow> data = TestUtils.genMultiColumnData("f", numColumns, numValues);
-		
+
 		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v1", "f3", "v1"));
 		p.insert(TestUtils.genDataRow("f1", "v2", "f2", "v1", "f3", "v1"));
 		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v1", "f3", "v1"));
 		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v2", "f3", "v2"));
-		
-		
-		SearchResult result = p.get(TestUtils.getFilterFor("f1", "v2"));
+
+
+		SearchResult result = p.get(TestUtils.getFilterFor("f1", "v2"), null);
 		long firstColumnCount = 0;
 		long secondColumnCount = 0;
-		for (Entry<SearchResultRow, Long> e : result.getResults().entrySet()) {
-			SearchResultRow row = e.getKey();
+		for (Entry<GroupedSearchResultRow, Long> e : result.getResults().entrySet()) {
+			GroupedSearchResultRow row = e.getKey();
 			log.info("{}={}", row, e.getValue());
 			if (row.getFieldName().equals("f1")) {
 				firstColumnCount += e.getValue();
@@ -364,23 +387,22 @@ public class OffHeapPartitionTest {
 			}
 		}
 		//log.info("Found {} results", firstColumnCount);
-		assertEquals(0l, result.getResults().get(new SearchResultRow("f3", "v2", "c")).longValue());
-		assertEquals(1l, result.getResults().get(new SearchResultRow("f3", "v1", "c")).longValue());
+		assertEquals(0l, result.getResults().get(createRow("f3", "v2", "c")).longValue());
+		assertEquals(1l, result.getResults().get(createRow("f3", "v1", "c")).longValue());
 		assertEquals(4l, firstColumnCount);
 		assertEquals(1l, secondColumnCount);
-		
-		assertEquals(2l, p.get(TestUtils.getFilterFor("f3", "v1"))
-				.getResults()
-				.get(new SearchResultRow("f1", "v1", "c")).longValue());
+		assertEquals(2l, p.get(TestUtils.getFilterFor("f3", "v1"), null)
+					 .getResults()
+					 .get(createRow("f1", "v1", "c")).longValue());
 	}
-	
+
 	@Test
 	public void insertNullTest(){
 		OffHeapPartition p = createPartition();
 		p.insert(TestUtils.genDataRow("not_null", "1", "null", null));
-		p.get(TestUtils.getFilterFor("null", null));
+		p.get(TestUtils.getFilterFor("null", null), null);
 	}
-	
+
 	@Test
 	public void serDeTest() throws FileNotFoundException, IOException
 	{
@@ -399,8 +421,8 @@ public class OffHeapPartitionTest {
 		output.close();
 		long t1 = System.nanoTime();
 		log.info("Took {} ms to write {} records", (t1 - t0) / 1000000, data.size());
-		
-		
+
+
 		// Now reading the file
 		Input input = new Input(new GZIPInputStream( new FileInputStream(destination)));
 		t0 = System.nanoTime();
@@ -414,7 +436,7 @@ public class OffHeapPartitionTest {
 		log.info("{}", newP.getStats());
 		destination.deleteOnExit();
 	}
-	
+
 	@Test
 	public void faultySerDeTest() throws FileNotFoundException, IOException
 	{
@@ -425,51 +447,51 @@ public class OffHeapPartitionTest {
 			p.insert(r);
 		}
 		File dump = TestUtils.dumpToTmpFile(p);
-		
+
 		Input input = new Input(new GZIPInputStream( new FileInputStream(dump)));
 		long t0 = System.nanoTime();
 		Kryo kryo = new Kryo();
 		Partition newP = (Partition)kryo.readClassAndObject(input);
 		long t1 = System.nanoTime();
 		log.info("Took {} ms to read {} records", (t1 - t0) / 1000000, newP.getNumRecords());
-		log.info("{}", newP.getStats());		
+		log.info("{}", newP.getStats());
 	}
-	
+
 	@Test
 	public void counterConsistencyTest() throws FileNotFoundException, IOException
 	{
 		Partition p = createPartition();
 		p.insert(TestUtils.genDataRow("f1", "v1"));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v1"));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("f1", "v1"));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("f1", "v1", "f3", null));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("f1", "v1"));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("new_field", null));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 	}
-	
+
 	@Test
 	public void counterConsistencyTestLarge() throws FileNotFoundException, IOException
 	{
 		int numColumns = 5;
 		int numValues = 6;
 		Partition p = createPartition();
-		
+
 		for(DataRow r: TestUtils.genMultiColumnData("f1", numColumns, numValues))
 			p.insert(r);
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		for(DataRow r: TestUtils.genMultiColumnData("f1", numColumns+1, numValues))
 			p.insert(r);
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		for(DataRow r: TestUtils.genMultiColumnData("f1", numColumns+1, numValues+1))
 			p.insert(r);
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("new_field", null));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>()).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 	}
 }

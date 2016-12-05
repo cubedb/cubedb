@@ -19,7 +19,7 @@ import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.SearchResult;
-import org.cubedb.core.beans.SearchResultRow;
+import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.core.lookups.HashMapLookup;
 import org.cubedb.core.lookups.Lookup;
 import org.cubedb.core.tiny.TinyColumn;
@@ -35,6 +35,8 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
 public class OffHeapPartition implements Partition {
+
+	private final static int FAKE_GROUP_VALUE_ID = 0;
 
 	protected Map<String, Lookup> lookups;
 	protected Lookup fieldLookup;
@@ -295,20 +297,36 @@ public class OffHeapPartition implements Partition {
 
 	}
 
-	protected long[][][] initSideCounters() {
+	protected long[][][][] initSideCounters() {
 		// log.debug("Metrics look like this: {}",
 		// (Object)this.metricLookup.getKeys());
-		final long[][][] out = new long[this.fieldLookup.size()][][];
+		final long[][][][] out = new long[this.fieldLookup.size()][][][];
 		for (int i = 0; i < this.fieldLookup.size(); i++) {
 			String fieldName = this.fieldLookup.getKey(i);
 			Lookup side = this.lookups.get(fieldName);
-			long[][] sideCounters = new long[side.size()][this.metricLookup.size()];
+			long[][][] sideCounters = new long[side.size()][1][this.metricLookup.size()];
 			for (int s = 0; s < sideCounters.length; s++)
 				for (int m = 0; m < this.metricLookup.size(); m++)
-					sideCounters[s][m] = 0l;
+					sideCounters[s][FAKE_GROUP_VALUE_ID][m] = 0l;
 			out[i] = sideCounters;
 		}
 		// log.debug("Initial counters look like this {}", (Object)out);
+		return out;
+	}
+
+	protected long[][][][] initGroupedSideCounters(final String groupFieldName) {
+		final long[][][][] out = new long[this.fieldLookup.size()][][][];
+		final Lookup groupSide = this.lookups.get(groupFieldName);
+		for (int f = 0; f < this.fieldLookup.size(); f++) {
+			String fieldName = this.fieldLookup.getKey(f);
+			Lookup side = this.lookups.get(fieldName);
+			long[][][] sideCounters = new long[side.size()][groupSide.size()][this.metricLookup.size()];
+			for (int s = 0; s < sideCounters.length; s++)
+				for (int g = 0; g < groupSide.size(); g++)
+					for (int m = 0; m < this.metricLookup.size(); m++)
+						sideCounters[s][g][m] = 0l;
+			out[f] = sideCounters;
+		}
 		return out;
 	}
 
@@ -320,52 +338,44 @@ public class OffHeapPartition implements Partition {
 		return columns;
 	}
 
-	protected SearchResult convertToResult(long[][][] sideCounters, long[] totalCounters) {
-		final Map<SearchResultRow, Long> result = new HashMap<SearchResultRow, Long>();
-		for (int i = 0; i < sideCounters.length; i++) {
-			String sideName = this.fieldLookup.getKey(i);
-			final Lookup sideLookup = this.lookups.get(sideName);
-			for (int j = 0; j < sideCounters[i].length; j++) {
-				String sideValue = sideLookup.getKey(j);
-				for (int m = 0; m < sideCounters[i][j].length; m++) {
-					String metricName = this.metricLookup.getKey(m);
-					SearchResultRow r = new SearchResultRow();
-					r.setFieldName(sideName);
-					r.setFieldValue(sideValue);
-					r.setMetricName(metricName);
-					result.put(r, sideCounters[i][j][m]);
-				}
-			}
-
-		}
-		Map<String, Long> totalCounts = new HashMap<String, Long>(totalCounters.length);
-		for (int i = 0; i < totalCounters.length; i++)
-			totalCounts.put(this.metricLookup.getKey(i), totalCounters[i]);
-		// log.debug("Converted {} to {}", sideCounters, result);
-		return new SearchResult(result, totalCounts);
-	}
-
-	protected SearchResult getEmptySearchResult() {
-		Map<String, Long> totalCounts = new HashMap<String, Long>();
-		for (String metricName : this.metrics.keySet()) {
-			totalCounts.put(metricName, 0l);
-		}
-		SearchResult r = new SearchResult(new HashMap<SearchResultRow, Long>(), totalCounts);
-		return r;
-	}
-
 	@Override
-	public SearchResult get(List<Filter> filters) {
+	public SearchResult get(List<Filter> filters, String groupFieldName) {
 		// log.debug("Starting search");
 		long t0 = System.nanoTime(); // debug purposes
 		int curSize = size; // current max index of rows in the db
+
 
 		// creating an empty result set, with id's
 		final String[] metricNames = this.metricLookup.getKeys();
 		final long[] totalCounters = new long[metricNames.length];
 
-		// field names -> (field id -> (metric name -> counter))
-		final long[][][] sideCounters = initSideCounters();
+
+		// a field to use for result grouping
+		final boolean doFieldGrouping = groupFieldName != null;
+		final int groupFieldId;
+		// field names -> (column value id -> (group value id -> (metric name -> counter)))
+		final long[][][][] sideCounters;
+
+		/*
+		 * When field grouping is *not required* we basically just use a
+		 * single-value array with a zero id for the groupValueId array.
+		 *
+		 * If the grouping field does not exist in the partition - just return
+		 * en empty result.
+		 *
+		 * TODO: moving the check higher? To the Cube?
+		 */
+		if (doFieldGrouping && fieldLookup.containsValue(groupFieldName)) {
+			groupFieldId = fieldLookup.getValue(groupFieldName);
+			sideCounters = initGroupedSideCounters(groupFieldName);
+		} else if (doFieldGrouping && !fieldLookup.containsValue(groupFieldName)) {
+			log.warn(String.format("Grouping column %s does not exist in this partition", groupFieldName));
+			return SearchResult.buildEmpty(metrics.keySet());
+		} else {
+			groupFieldId = FAKE_GROUP_VALUE_ID;
+			sideCounters = initSideCounters();
+		}
+
 		final Column[] columns = getColumnsAsArray();
 
 		int matchCount = 0; // Debug variable
@@ -374,7 +384,7 @@ public class OffHeapPartition implements Partition {
 		// creating a map of matchers based on filter
 
 		/*
-		 * These fields are mostly primitive array representations of what
+		 * these fields are mostly primitive array representations of what
 		 * previously was stored in Objects and HashMaps
 		 */
 
@@ -409,8 +419,8 @@ public class OffHeapPartition implements Partition {
 			final Map<String, IdMatcher> matchers = transformFiltersToMatchers(filters);
 
 			for (Entry<String, IdMatcher> e : matchers.entrySet()) {
-				int field_id = this.fieldLookup.getValue(e.getKey());
-				matchersArray[field_id] = e.getValue();
+				int fieldId = this.fieldLookup.getValue(e.getKey());
+				matchersArray[fieldId] = e.getValue();
 			}
 
 			/*
@@ -418,8 +428,8 @@ public class OffHeapPartition implements Partition {
 			 * that in 99% of cases there is only one metric
 			 */
 			for (Entry<String, Metric> e : metrics.entrySet()) {
-				int field_id = this.metricLookup.getValue(e.getKey());
-				metricsArray[field_id] = e.getValue();
+				int fieldId = this.metricLookup.getValue(e.getKey());
+				metricsArray[fieldId] = e.getValue();
 			}
 
 			/*
@@ -429,7 +439,6 @@ public class OffHeapPartition implements Partition {
 
 			t2 = System.nanoTime();
 			for (int i = 0; i < curSize; i++) {
-
 				/*
 				 * Here we do not retrieve values of all columns. We only get
 				 * those which are related to a filter/matcher
@@ -458,26 +467,38 @@ public class OffHeapPartition implements Partition {
 					}
 
 					/*
-					 * Second, we retrieve the values of all columns. 
-					 * For each side, we increment the side counter. 
-					 * Third, we
+					 * Then, check if all columns of a row match. Increase the
+					 * totalCounters if positive.
 					 */
-					for (int side = 0; side < this.fieldLookup.size(); side++) {
-						final int columnId = columnValues[side];
-						MatchType matchType = checkColumnMatch(columnMatches, side);
-						if (matchType != MatchType.NO_MATCH) {
-							// this row matches other filters
-							for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-								sideCounters[side][columnId][mIndex] += metricValues[mIndex];
+					if (checkAllMatch(columnMatches)) {
+						for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
+							totalCounters[mIndex] += metricValues[mIndex];
+						}
+					}
 
-								if (side == 0 && matchType == MatchType.ALL_COLUMNS_MATCH) {
-									/*
-									 * In fact, the row matches all filters. 
-									 * We are going to increase the total counters.
-									 */
-									totalCounters[mIndex] += metricValues[mIndex];
-								}
-							}
+					/*
+					 * Find out the value of the field to group by for the i-th row.
+					 */
+					final int groupFieldValueId = doFieldGrouping ? columns[groupFieldId].get(i): FAKE_GROUP_VALUE_ID;
+
+					/*
+					 * Last, retrieve the values of all columns. For each side,
+					 * we increment the side counter, but only when *other* side
+					 * filters match.
+					 */
+					for (int fieldId = 0; fieldId < this.fieldLookup.size(); fieldId++) {
+						/*
+						 * We don't care if the current side filter is applied
+						 * or not - it should only influence *other* side
+						 * filtering.
+						 */
+						if (!checkOtherMatch(columnMatches, fieldId)) {
+							continue;
+						}
+
+						final int columnValueId = columnValues[fieldId];
+						for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
+							sideCounters[fieldId][columnValueId][groupFieldValueId][mIndex] += metricValues[mIndex];
 						}
 					}
 				}
@@ -486,9 +507,13 @@ public class OffHeapPartition implements Partition {
 
 		} catch (ColumnDoesNotExistException e) {
 			log.warn(e.getMessage());
-			return getEmptySearchResult();
+			return SearchResult.buildEmpty(metrics.keySet());
 		}
-		final SearchResult result = convertToResult(sideCounters, totalCounters);
+		final SearchResult result = SearchResult.buildFromResultArray(
+			  sideCounters, totalCounters,
+			  doFieldGrouping, groupFieldName,
+			  lookups, fieldLookup, metricLookup
+		);
 		final long t1 = System.nanoTime();
 		// log.debug("Got {} matches for the query in {}ms among {} rows",
 		// matchCount, (t1 - t0) / 1000000.0, curSize);
@@ -502,19 +527,22 @@ public class OffHeapPartition implements Partition {
 
 	}
 
-	private MatchType checkColumnMatch(boolean[] matches, int side) {
-		MatchType currentMatch = MatchType.ALL_COLUMNS_MATCH;
-
+	private boolean checkAllMatch(boolean[] matches) {
 		for (int i = 0; i < matches.length; i++) {
 			if (!matches[i]) {
-				if (i == side)
-					currentMatch = MatchType.OTHER_COLUMNS_MATCH;
-				else {
-					return MatchType.NO_MATCH;
-				}
+				return false;
 			}
 		}
-		return currentMatch;
+		return true;
+	}
+
+	private boolean checkOtherMatch(boolean[] matches, int side) {
+		for (int i = 0; i < matches.length; i++) {
+			if (!matches[i] && i != side) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	// TODO: maybe rewrite to a bitwise op

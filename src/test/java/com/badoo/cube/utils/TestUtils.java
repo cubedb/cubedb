@@ -28,7 +28,8 @@ import org.cubedb.core.Cube;
 import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
-import org.cubedb.core.beans.SearchResultRow;
+import org.cubedb.core.beans.SearchResult;
+import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.offheap.OffHeapPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,7 +82,7 @@ public class TestUtils {
 		r.setCounters(counters);
 		return r;
 	}
-	
+
 	public static List<DataRow> genDataRowList(String partitionName, String... fieldsAndValues) {
 		List<DataRow> out = new ArrayList<DataRow>();
 		DataRow r = genDataRow(fieldsAndValues);
@@ -137,7 +138,7 @@ public class TestUtils {
 		addPart( cubeName,  partitionName, out, values, 0, numValues, fieldPrefix);
 		return out;
 	}
-	
+
 	public static List<DataRow> genMultiColumnData(String fieldPrefix, int numFields, int numValues) {
 		return genMultiColumnData("cubeName","p", fieldPrefix, numFields, numValues);
 	}
@@ -158,8 +159,9 @@ public class TestUtils {
 	public static long checkMatch(OffHeapPartition p, String field, String value, String metric) {
 		log.info("Checking match for {}={}", field, value);
 		List<Filter> f = getFilterFor(field, value);
-		Map<SearchResultRow, Long> result = p.get(f).getResults();
-		Long count = result.get(new SearchResultRow(field, value, metric));
+		Map<GroupedSearchResultRow, Long> result = p.get(f, null).getResults();
+		GroupedSearchResultRow row = new GroupedSearchResultRow(field, value, metric);
+		Long count = result.get(row);
 		return count == null ? 0 : count.longValue();
 	}
 
@@ -170,12 +172,13 @@ public class TestUtils {
 			String value = fieldsAndValues[i + 1];
 			filters.add(getFilterFor(field, value).get(0));
 		}
-		Map<SearchResultRow, Long> result = p.get(filters).getResults();
+		Map<GroupedSearchResultRow, Long> result = p.get(filters, null).getResults();
 		long resultCount = 0l;
 		for (int i = 0; i < fieldsAndValues.length; i += 2) {
 			String field = fieldsAndValues[i];
 			String value = fieldsAndValues[i + 1];
-			resultCount += result.get(new SearchResultRow(field, value, metric)).longValue();
+			GroupedSearchResultRow row = new GroupedSearchResultRow(field, value, metric);
+			resultCount += result.get(row).longValue();
 		}
 		return resultCount;
 	}
@@ -215,13 +218,13 @@ public class TestUtils {
 		long t1 = System.nanoTime();
 		return t1 - t0;
 	}
-	
+
 	public static List<DataRow> readFromJsonFile(String gzipFile) throws FileNotFoundException, IOException{
 		GZIPInputStream source = new GZIPInputStream(new FileInputStream(new File(gzipFile)));
 		String content = IOUtils.toString(source);
-		return new Genson().deserialize(content, new GenericType<List<DataRow>>(){});   
+		return new Genson().deserialize(content, new GenericType<List<DataRow>>(){});
 	}
-	
+
 	public static List<DataRow> readFromJsonFileLineByLine(String gzipFile) throws FileNotFoundException, IOException{
 		GZIPInputStream source = new GZIPInputStream(new FileInputStream(new File(gzipFile)));
 		String content = IOUtils.toString(source);
@@ -230,10 +233,10 @@ public class TestUtils {
 		GenericType<DataRow> t = new GenericType<DataRow>(){};
 		for(String line : content.split("\n"))
 			out.add(g.deserialize(line, t));
-			
-		return out;   
+
+		return out;
 	}
-	
+
 	public static <V> void compareSets(Set<V> left, Set<V> right){
 		for (V f : left) {
 			if (!right.contains(f)) {
@@ -248,7 +251,7 @@ public class TestUtils {
 			}
 		}
 	}
-	
+
 	public static <K,V> void testGroupings(Collection<K> left, Collection<K> right, Function<K, V> grouper){
 		Map<V, Set<K>> leftGroup = left.stream().collect(Collectors.groupingBy(grouper, Collectors.toSet()));
 		Map<V, Set<K>> rightGroup = right.stream().collect(Collectors.groupingBy(grouper, Collectors.toSet()));
@@ -278,11 +281,11 @@ public class TestUtils {
 		//log.info(new Genson().serialize(leftGroup));
 		//log.info(new Genson().serialize(rightGroup));
 		assertEquals(leftGroup, rightGroup);
-		
+
 	}
-	
-	
-	
+
+
+
 	public static File dumpToTmpFile(Partition p) throws FileNotFoundException, IOException
 	{
 		File destination = File.createTempFile("partition_", ".gz");
@@ -294,18 +297,18 @@ public class TestUtils {
 		long t1 = System.nanoTime();
 		log.info("Took {} ms to write {} records", (t1 - t0) / 1000000, p.getNumRecords());
 		destination.deleteOnExit();
-		return destination;	
+		return destination;
 	}
-	
+
 	public static File dumpCubeToTmpFile(Cube c) throws FileNotFoundException, IOException
 	{
 		File destination = File.createTempFile("cube_", ".gz");
 		c.save(destination.getAbsolutePath());
 		destination.deleteOnExit();
-		return destination;	
+		return destination;
 	}
 
-	public static File dumpCubeToTmpFileAsJson(Cube c, String cubeName) 
+	public static File dumpCubeToTmpFileAsJson(Cube c, String cubeName)
 		throws FileNotFoundException, IOException
 		{
 			long t0 = System.nanoTime();
@@ -315,13 +318,20 @@ public class TestUtils {
 			destination.deleteOnExit();
 			long t1 = System.nanoTime();
 			log.info("Took {} ms to write cube", (t1 - t0) / 1000000);
-			return destination;	
+			return destination;
 		}
-	
-	public static void ensureSidesAddUp(Map<SearchResultRow,Long> result)
+
+	public static void ensureSidesAddUp(Map<GroupedSearchResultRow,Long> result)
 	{
-		Map<String, LongSummaryStatistics> sideTotals = result.entrySet().stream().collect(Collectors.groupingBy(e -> e.getKey().getFieldName(), Collectors.summarizingLong(e-> e.getValue().longValue())));
-		int numDistinctValues =  sideTotals.values().stream().map(LongSummaryStatistics::getSum).distinct().collect(Collectors.toList()).size();
+		Map<String, LongSummaryStatistics> sideTotals = result.entrySet()
+			.stream()
+			.collect(Collectors.groupingBy(e -> e.getKey().getFieldName(),
+										   Collectors.summarizingLong(e-> e.getValue().longValue())));
+		int numDistinctValues = sideTotals.values()
+			.stream()
+			.map(LongSummaryStatistics::getSum)
+			.distinct()
+			.collect(Collectors.toList()).size();
 		if(numDistinctValues!=1)
 		{
 			log.error("Sides do not add up");
@@ -329,10 +339,10 @@ public class TestUtils {
 		}
 		assertEquals(1, numDistinctValues);
 	}
-	
+
 	public static void setFinalStatic(Field field, Object newValue) throws Exception {
 	    field.setAccessible(true);
-	    
+
 	    // remove final modifier from field
 	    Field modifiersField = Field.class.getDeclaredField("modifiers");
 	    modifiersField.setAccessible(true);
