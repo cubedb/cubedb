@@ -2,13 +2,9 @@ package org.cubedb.core.beans;
 
 public class SearchResultRow {
 
-	protected String fieldName;
-	protected String fieldValue;
-	protected String metricName;
-
-	public SearchResultRow() {
-		super();
-	}
+	protected final String fieldName;
+	protected final String fieldValue;
+	protected final String metricName;
 
 	public SearchResultRow(String fieldName, String fieldValue, String metricName) {
 		this.fieldName = fieldName;
@@ -21,24 +17,12 @@ public class SearchResultRow {
 		return fieldName;
 	}
 
-	public void setFieldName(String fieldName) {
-		this.fieldName = fieldName;
-	}
-
 	public String getFieldValue() {
 		return fieldValue;
 	}
 
-	public void setFieldValue(String fieldValue) {
-		this.fieldValue = fieldValue;
-	}
-
 	public String getMetricName() {
 		return metricName;
-	}
-
-	public void setMetricName(String metricName) {
-		this.metricName = metricName;
 	}
 
 	@Override

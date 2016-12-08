@@ -24,8 +24,8 @@ public class CachedCountersOffHeapPartitionTest extends OffHeapPartitionTest{
 	@Test
 	public void testNullValuesAfterInit() {
 		Partition p = createPartition();
-		GroupedSearchResultRow r = new GroupedSearchResultRow("null_field", "null", "c");
-		GroupedSearchResultRow notNullR = new GroupedSearchResultRow("not_null", "null", "c");
+		GroupedSearchResultRow r = new GroupedSearchResultRow(SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_FIELD_VALUE, "null_field", "null", "c");
+		GroupedSearchResultRow notNullR = new GroupedSearchResultRow(SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_FIELD_VALUE, "not_null", "null", "c");
 		p.insert(TestUtils.genDataRow("not_null", "not_null", "null_field", null));
 		SearchResult first = p.get(new ArrayList<Filter>(), null);
 		p.insert(TestUtils.genDataRow("not_null", null, "null_field", null));

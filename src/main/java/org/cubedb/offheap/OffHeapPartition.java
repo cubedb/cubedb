@@ -317,13 +317,15 @@ public class OffHeapPartition implements Partition {
 	protected long[][][][] initGroupedSideCounters(final String groupFieldName) {
 		final long[][][][] out = new long[this.fieldLookup.size()][][][];
 		final Lookup groupSide = this.lookups.get(groupFieldName);
-		for (int f = 0; f < this.fieldLookup.size(); f++) {
+		final int metricLookupSize = this.metricLookup.size();
+		final int lookupSize = this.fieldLookup.size();
+		for (int f = 0; f < lookupSize; f++) {
 			String fieldName = this.fieldLookup.getKey(f);
 			Lookup side = this.lookups.get(fieldName);
-			long[][][] sideCounters = new long[side.size()][groupSide.size()][this.metricLookup.size()];
+			long[][][] sideCounters = new long[side.size()][groupSide.size()][metricLookupSize];
 			for (int s = 0; s < sideCounters.length; s++)
 				for (int g = 0; g < groupSide.size(); g++)
-					for (int m = 0; m < this.metricLookup.size(); m++)
+					for (int m = 0; m < metricLookupSize; m++)
 						sideCounters[s][g][m] = 0l;
 			out[f] = sideCounters;
 		}
@@ -437,6 +439,7 @@ public class OffHeapPartition implements Partition {
 			 * have to be as fast as possible
 			 */
 
+			final int fieldLookupSize = this.fieldLookup.size();
 			t2 = System.nanoTime();
 			for (int i = 0; i < curSize; i++) {
 				/*
@@ -457,6 +460,7 @@ public class OffHeapPartition implements Partition {
 				 * At least one of the filters was matched. We need this row
 				 */
 				if (atLeastOneMatch(columnMatches)) {
+					matchCount++;
 					/*
 					 * We have a match! First, we retrieve the counters values
 					 * for this row
@@ -486,7 +490,7 @@ public class OffHeapPartition implements Partition {
 					 * we increment the side counter, but only when *other* side
 					 * filters match.
 					 */
-					for (int fieldId = 0; fieldId < this.fieldLookup.size(); fieldId++) {
+					for (int fieldId = 0; fieldId < fieldLookupSize; fieldId++) {
 						/*
 						 * We don't care if the current side filter is applied
 						 * or not - it should only influence *other* side
@@ -509,19 +513,20 @@ public class OffHeapPartition implements Partition {
 			log.warn(e.getMessage());
 			return SearchResult.buildEmpty(metrics.keySet());
 		}
+		final long t_pre_build = System.nanoTime();
 		final SearchResult result = SearchResult.buildFromResultArray(
 			  sideCounters, totalCounters,
 			  doFieldGrouping, groupFieldName,
 			  lookups, fieldLookup, metricLookup
 		);
 		final long t1 = System.nanoTime();
-		// log.debug("Got {} matches for the query in {}ms among {} rows",
-		// matchCount, (t1 - t0) / 1000000.0, curSize);
+		log.debug("Building result from array took {}ms", (t1 - t_pre_build) / 1000000.0);
+		log.debug("Got {} matches for the query in {}ms among {} rows", matchCount, (t1 - t0) / 1000000.0, curSize);
 		if (curSize > 0 && (t3 - t2) > 0) {
 			int rowsPerSecond = (int) (1000000000l * curSize / (t3 - t2));
-			// log.debug("Bruteforce search itself took {} ms", (t3 - t2) /
-			// 1000000.0);
-			// log.debug("Bruteforce search is {} rows/second", rowsPerSecond);
+			 log.debug("Bruteforce search itself took {} ms", (t3 - t2) /
+			 1000000.0);
+			 log.debug("Bruteforce search is {} rows/second", rowsPerSecond);
 		}
 		return result;
 

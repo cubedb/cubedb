@@ -76,7 +76,7 @@ public class CubeUtils {
 			);
 	}
 
-	public static Map<String, Map<String, Map<String, Map<String, Map<String, Long>>>>>
+	public static Map<String, Map<String, Map<String, Map<String, Long>>>>
 		searchResultsToGroupedMap(Map<GroupedSearchResultRow, Long> in) {
 		return in
 			.entrySet()
@@ -87,8 +87,6 @@ public class CubeUtils {
 					Collectors.groupingBy(
 						e-> e.getKey().getFieldValue(),
 						Collectors.groupingBy(
-							e-> e.getKey().getGroupFieldName(),
-							Collectors.groupingBy(
 								e-> e.getKey().getGroupFieldValue(),
 								Collectors.groupingBy(
 									e-> e.getKey().getMetricName(),
@@ -96,7 +94,6 @@ public class CubeUtils {
 								)
 							)
 						)
-					)
 				)
 			);
 	}

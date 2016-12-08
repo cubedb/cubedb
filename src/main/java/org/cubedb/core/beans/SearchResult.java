@@ -4,14 +4,20 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
 import org.cubedb.core.lookups.Lookup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.esotericsoftware.minlog.Log;
+
+import org.cubedb.core.CubeImpl;
 import org.cubedb.core.Metric;
 
 import org.cubedb.core.beans.GroupedSearchResultRow;
 
 public class SearchResult {
-
-	public final static String FAKE_GROUP_FIELD_NAME = "FAKE_GROUP_FIELD_NAME";
-	public final static String FAKE_GROUP_VALUE = "FAKE_GROUP_VALUE";
+	public static final Logger log = LoggerFactory.getLogger(SearchResult.class);
+	public final static String FAKE_GROUP_FIELD_NAME = "DEFAULT_GROUP_FIELD_NAME";
+	public final static String FAKE_GROUP_FIELD_VALUE = "DEFAULT_GROUP_FIELD_VALUE";
 
 	Map<GroupedSearchResultRow, Long> results;
 	Map<String, Long> totalCounts;
@@ -26,6 +32,8 @@ public class SearchResult {
 		return r;
 	}
 
+	
+	//TODO: re-implement with using a list instead of hashmap. 
 	public static SearchResult buildFromResultArray(long[][][][] sideCounters,
 													long[] totalCounters,
 													boolean isGroupLookup,
@@ -33,7 +41,7 @@ public class SearchResult {
 													Map<String, Lookup> lookups,
 													Lookup fieldLookup,
 													Lookup metricLookup) {
-		final Map<GroupedSearchResultRow, Long> groupedResult = new HashMap<GroupedSearchResultRow, Long>();
+		final Map<GroupedSearchResultRow, Long> groupedResult = new HashMap<GroupedSearchResultRow, Long>(10000);
 		Lookup groupFieldLookup = lookups.get(groupFieldName);
 		if (!isGroupLookup) {
 			groupFieldName = FAKE_GROUP_FIELD_NAME;
@@ -44,20 +52,23 @@ public class SearchResult {
 			for (int j = 0; j < sideCounters[i].length; j++) {
 				String sideValue = sideLookup.getKey(j);
 				for (int g = 0; g < sideCounters[i][j].length; g++) {
-					String groupFieldValue = isGroupLookup ? groupFieldLookup.getKey(g) : FAKE_GROUP_VALUE;
+					String groupFieldValue = isGroupLookup ? groupFieldLookup.getKey(g) : FAKE_GROUP_FIELD_VALUE;
 					for (int m = 0; m < sideCounters[i][j][g].length; m++) {
 						String metricName = metricLookup.getKey(m);
-						GroupedSearchResultRow r = new GroupedSearchResultRow();
-						r.setGroupFieldName(groupFieldName);
-						r.setGroupFieldValue(groupFieldValue);
-						r.setFieldName(sideName);
-						r.setFieldValue(sideValue);
-						r.setMetricName(metricName);
-						groupedResult.put(r, sideCounters[i][j][g][m]);
+						if(sideCounters[i][j][g][m]!=0){
+							GroupedSearchResultRow r = new GroupedSearchResultRow(
+									groupFieldName, 
+									groupFieldValue,
+									sideName,
+									sideValue,
+									metricName);
+							groupedResult.put(r, sideCounters[i][j][g][m]);
+						}
 					}
 				}
 			}
 		}
+		log.debug("Result size is {}", groupedResult.size());
 
 		Map<String, Long> totalCounts = new HashMap<String, Long>(totalCounters.length);
 		for (int i = 0; i < totalCounters.length; i++)

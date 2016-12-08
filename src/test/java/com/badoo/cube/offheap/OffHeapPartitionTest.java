@@ -38,7 +38,8 @@ public class OffHeapPartitionTest {
 	}
 
 	public GroupedSearchResultRow createRow(String name, String value, String metric) {
-		return new GroupedSearchResultRow(name, value, metric);
+		return new GroupedSearchResultRow(SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_FIELD_VALUE, name,
+				value, metric);
 	}
 
 	@Test
@@ -56,7 +57,8 @@ public class OffHeapPartitionTest {
 		long newTtl = 10l;
 		int numRecords = 10;
 		Constants.KEY_MAP_TTL = newTtl;
-		//TestUtils.setFinalStatic(Constants.class.getField("KEY_MAP_TTL"), newTtl);
+		// TestUtils.setFinalStatic(Constants.class.getField("KEY_MAP_TTL"),
+		// newTtl);
 		Thread.sleep(newTtl + 1l);
 		log.info("Value of KEY_MAP_TTL is now {}", Constants.KEY_MAP_TTL);
 		assertEquals(newTtl, Constants.KEY_MAP_TTL);
@@ -71,7 +73,8 @@ public class OffHeapPartitionTest {
 		assertEquals(p.getNumRecords(), numRecords);
 		p.insertData(TestUtils.genSimpleData("f1", "c", numRecords));
 		assertEquals(p.getNumRecords(), numRecords);
-		//TestUtils.setFinalStatic(Constants.class.getField("KEY_MAP_TTL"), oldTtl);
+		// TestUtils.setFinalStatic(Constants.class.getField("KEY_MAP_TTL"),
+		// oldTtl);
 		Constants.KEY_MAP_TTL = oldTtl;
 	}
 
@@ -165,7 +168,7 @@ public class OffHeapPartitionTest {
 		List<DataRow> data = TestUtils.genSimpleData("f1", "c", 1);
 		p.insertData(data);
 		SearchResult result = p.get(new ArrayList<Filter>(), null);
-		assertEquals(2, result.getResults().size());
+		assertEquals(1, result.getResults().size());
 		assertEquals(1l, result.getResults().get(createRow("f1", "f1_value_0", "c")).longValue());
 	}
 
@@ -181,11 +184,11 @@ public class OffHeapPartitionTest {
 		// log.debug("results with grouped: {}", result);
 		// 2 + null values for f1, 1 + null values for f2
 		SearchResult result = p.get(new ArrayList<Filter>(), null);
-		assertEquals(5, result.getResults().size());
+		assertEquals(3, result.getResults().size());
 
 		result = p.get(new ArrayList<Filter>(), "f1");
 		// non-grouped results * (2 grouping values + null)
-		assertEquals(15, result.getResults().size());
+		assertEquals(4, result.getResults().size());
 	}
 
 	@Test
@@ -365,13 +368,13 @@ public class OffHeapPartitionTest {
 	public void testGetSelectiveFilterSameField() {
 		OffHeapPartition p = createPartition();
 
-		//List<DataRow> data = TestUtils.genMultiColumnData("f", numColumns, numValues);
+		// List<DataRow> data = TestUtils.genMultiColumnData("f", numColumns,
+		// numValues);
 
 		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v1", "f3", "v1"));
 		p.insert(TestUtils.genDataRow("f1", "v2", "f2", "v1", "f3", "v1"));
 		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v1", "f3", "v1"));
 		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v2", "f3", "v2"));
-
 
 		SearchResult result = p.get(TestUtils.getFilterFor("f1", "v2"), null);
 		long firstColumnCount = 0;
@@ -386,29 +389,27 @@ public class OffHeapPartitionTest {
 				secondColumnCount += e.getValue();
 			}
 		}
-		//log.info("Found {} results", firstColumnCount);
-		assertEquals(0l, result.getResults().get(createRow("f3", "v2", "c")).longValue());
+		// log.info("Found {} results", firstColumnCount);
+		//assertEquals(0l, result.getResults().get(createRow("f3", "v2", "c")).longValue());
 		assertEquals(1l, result.getResults().get(createRow("f3", "v1", "c")).longValue());
 		assertEquals(4l, firstColumnCount);
 		assertEquals(1l, secondColumnCount);
-		assertEquals(2l, p.get(TestUtils.getFilterFor("f3", "v1"), null)
-					 .getResults()
-					 .get(createRow("f1", "v1", "c")).longValue());
+		assertEquals(2l, p.get(TestUtils.getFilterFor("f3", "v1"), null).getResults().get(createRow("f1", "v1", "c"))
+				.longValue());
 	}
 
 	@Test
-	public void insertNullTest(){
+	public void insertNullTest() {
 		OffHeapPartition p = createPartition();
 		p.insert(TestUtils.genDataRow("not_null", "1", "null", null));
 		p.get(TestUtils.getFilterFor("null", null), null);
 	}
 
 	@Test
-	public void serDeTest() throws FileNotFoundException, IOException
-	{
+	public void serDeTest() throws FileNotFoundException, IOException {
 		Kryo kryo = new Kryo();
 		File destination = File.createTempFile("partition_", ".gz");
-	    Output output = new Output(new GZIPOutputStream(new FileOutputStream(destination)));
+		Output output = new Output(new GZIPOutputStream(new FileOutputStream(destination)));
 		int numColumns = 6;
 		int numValues = 6;
 		OffHeapPartition p = createPartition();
@@ -422,9 +423,8 @@ public class OffHeapPartitionTest {
 		long t1 = System.nanoTime();
 		log.info("Took {} ms to write {} records", (t1 - t0) / 1000000, data.size());
 
-
 		// Now reading the file
-		Input input = new Input(new GZIPInputStream( new FileInputStream(destination)));
+		Input input = new Input(new GZIPInputStream(new FileInputStream(destination)));
 		t0 = System.nanoTime();
 		OffHeapPartition newP = kryo.readObject(input, OffHeapPartition.class);
 		t1 = System.nanoTime();
@@ -438,28 +438,25 @@ public class OffHeapPartitionTest {
 	}
 
 	@Test
-	public void faultySerDeTest() throws FileNotFoundException, IOException
-	{
+	public void faultySerDeTest() throws FileNotFoundException, IOException {
 		List<DataRow> in = TestUtils.readFromJsonFile("src/test/resources/dumps/faulty.json.gz");
 		Partition p = createPartition();
-		for(DataRow r: in)
-		{
+		for (DataRow r : in) {
 			p.insert(r);
 		}
 		File dump = TestUtils.dumpToTmpFile(p);
 
-		Input input = new Input(new GZIPInputStream( new FileInputStream(dump)));
+		Input input = new Input(new GZIPInputStream(new FileInputStream(dump)));
 		long t0 = System.nanoTime();
 		Kryo kryo = new Kryo();
-		Partition newP = (Partition)kryo.readClassAndObject(input);
+		Partition newP = (Partition) kryo.readClassAndObject(input);
 		long t1 = System.nanoTime();
 		log.info("Took {} ms to read {} records", (t1 - t0) / 1000000, newP.getNumRecords());
 		log.info("{}", newP.getStats());
 	}
 
 	@Test
-	public void counterConsistencyTest() throws FileNotFoundException, IOException
-	{
+	public void counterConsistencyTest() throws FileNotFoundException, IOException {
 		Partition p = createPartition();
 		p.insert(TestUtils.genDataRow("f1", "v1"));
 		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
@@ -476,19 +473,18 @@ public class OffHeapPartitionTest {
 	}
 
 	@Test
-	public void counterConsistencyTestLarge() throws FileNotFoundException, IOException
-	{
+	public void counterConsistencyTestLarge() throws FileNotFoundException, IOException {
 		int numColumns = 5;
 		int numValues = 6;
 		Partition p = createPartition();
 
-		for(DataRow r: TestUtils.genMultiColumnData("f1", numColumns, numValues))
+		for (DataRow r : TestUtils.genMultiColumnData("f1", numColumns, numValues))
 			p.insert(r);
 		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
-		for(DataRow r: TestUtils.genMultiColumnData("f1", numColumns+1, numValues))
+		for (DataRow r : TestUtils.genMultiColumnData("f1", numColumns + 1, numValues))
 			p.insert(r);
 		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
-		for(DataRow r: TestUtils.genMultiColumnData("f1", numColumns+1, numValues+1))
+		for (DataRow r : TestUtils.genMultiColumnData("f1", numColumns + 1, numValues + 1))
 			p.insert(r);
 		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("new_field", null));

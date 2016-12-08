@@ -123,7 +123,7 @@ public class CubeImplTest {
 			log.info("Took {} ms to searh among {} records", (t1 - t0) / 1000000, size);
 			recordsPerSecond = size * 1000000000l / (t1 - t0);
 			log.info("That is {} records/second", recordsPerSecond);
-			assertEquals((numValues + 1) * numFields + numPartitions, result.size());
+			assertEquals((numValues ) * numFields + numPartitions, result.size());
 		}
 
 		// cube.in

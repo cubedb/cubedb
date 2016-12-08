@@ -148,7 +148,8 @@ public class CachedCountersOffHeapPartition extends OffHeapPartition {
 					for (final Entry<String, MutableLong> m : ee.getValue().entrySet()) {
 						//log.debug("m is {}", m.getKey());
 						final long val = m.getValue().get();
-						results.put(new GroupedSearchResultRow(e.getKey(), ee.getKey(), m.getKey()), val);
+						if(val!=0)
+							results.put(new GroupedSearchResultRow(SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_FIELD_VALUE, e.getKey(), ee.getKey(), m.getKey()), val);
 						if (firstSide){
 							// we calculate totals only once
 							totalCounts.computeIfAbsent(m.getKey(), k -> new MutableLong()).increment(val);

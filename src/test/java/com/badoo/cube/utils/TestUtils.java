@@ -160,7 +160,7 @@ public class TestUtils {
 		log.info("Checking match for {}={}", field, value);
 		List<Filter> f = getFilterFor(field, value);
 		Map<GroupedSearchResultRow, Long> result = p.get(f, null).getResults();
-		GroupedSearchResultRow row = new GroupedSearchResultRow(field, value, metric);
+		GroupedSearchResultRow row = new GroupedSearchResultRow(SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_FIELD_VALUE,  field, value, metric);
 		Long count = result.get(row);
 		return count == null ? 0 : count.longValue();
 	}
@@ -177,7 +177,7 @@ public class TestUtils {
 		for (int i = 0; i < fieldsAndValues.length; i += 2) {
 			String field = fieldsAndValues[i];
 			String value = fieldsAndValues[i + 1];
-			GroupedSearchResultRow row = new GroupedSearchResultRow(field, value, metric);
+			GroupedSearchResultRow row = new GroupedSearchResultRow(SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_FIELD_VALUE, field, value, metric);
 			resultCount += result.get(row).longValue();
 		}
 		return resultCount;

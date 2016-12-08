@@ -126,7 +126,7 @@ public class CubeImpl implements Cube {
 
 	protected Map<GroupedSearchResultRow, MutableLong> get(List<Pair<String, Partition>> partitions, List<Filter> filters,
 			String fromPartition, String toPartition, String groupBy) {
-		Map<GroupedSearchResultRow, MutableLong> out = new HashMap<GroupedSearchResultRow, MutableLong>();
+		Map<GroupedSearchResultRow, MutableLong> out = new HashMap<GroupedSearchResultRow, MutableLong>(1000, 0.5f);
 		for (Pair<String, Partition> e : partitions) {
 			String partitionValue = e.getKey();
 			boolean partitionMatch = partitionValue.compareTo(fromPartition) >= 0
@@ -134,17 +134,18 @@ public class CubeImpl implements Cube {
 
 			SearchResult searchResult = e.getValue().get(filters, groupBy);
 			if (partitionMatch) {
-				for (Entry<GroupedSearchResultRow, Long> sr : searchResult.getResults().entrySet()) {
-					MutableLong c = out.get(sr.getKey());
+				for (final Entry<GroupedSearchResultRow, Long> sr : searchResult.getResults().entrySet()) {
+					MutableLong c = out.computeIfAbsent(sr.getKey(), k -> new MutableLong()).increment(sr.getValue());
+					/*MutableLong c = out.get(sr.getKey());
 					if (c == null) {
 						c = new MutableLong();
 						out.put(sr.getKey(), c);
 					}
-					c.increment(sr.getValue());
+					c.increment(sr.getValue());*/
 				}
 			}
 			for (Entry<String, Long> tc : searchResult.getTotalCounts().entrySet()) {
-				GroupedSearchResultRow r = new GroupedSearchResultRow(partitionColumn, partitionValue, tc.getKey());
+				GroupedSearchResultRow r = new GroupedSearchResultRow(SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_FIELD_VALUE,  partitionColumn, partitionValue, tc.getKey());
 				out.put(r, new MutableLong(tc.getValue()));
 			}
 		}
@@ -213,12 +214,16 @@ public class CubeImpl implements Cube {
 		} catch (InterruptedException e1) {
 			e1.printStackTrace();
 		}
+		long t_pre_reduce = System.currentTimeMillis();
+		log.debug("Search pre-reduce took {}ms", t_pre_reduce - t0);
+		
 		Map<GroupedSearchResultRow, MutableLong> result = new HashMap<GroupedSearchResultRow, MutableLong>();
 		for (int i = 0; i < searchers.length; i++) {
 			for (Entry<GroupedSearchResultRow, MutableLong> e : searchers[i].getResult().entrySet())
 				result.computeIfAbsent(e.getKey(), row -> new MutableLong()).increment(e.getValue().get());
 		}
 		long t1 = System.currentTimeMillis();
+		log.debug("Reduce took {}ms", t1 - t_pre_reduce);
 		return result.entrySet().stream().collect(Collectors.toMap(Entry::getKey, e -> e.getValue().get()));
 	}
 
