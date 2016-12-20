@@ -255,23 +255,22 @@ public class OffHeapPartition implements Partition {
 		for (String columnName : columns.keySet()) {
 			filtersByColumn.put(columnName, new HashSet<String>());
 		}
-		for (Filter f : filters) {
-			if (!columns.containsKey(f.getField())) {
+		for (Filter filter : filters) {
+			if (!columns.containsKey(filter.getField())) {
 				// the column we are filtering for does not exist
 				// so, if we are looking for null value, then we are fine.
-				if (f.getValues().length == 1
-						&& (f.getValues()[0].equals(Constants.NULL_VALUE) || f.getValues()[0] == null)) {
+				if (filter.isNullValueFilter()) {
 					log.info("There is only one null value");
 					continue;
 				} else {
-					final String msg = String.format("Column %s does not exist in this partition", f.getField());
+					final String msg = String.format("Column %s does not exist in this partition", filter.getField());
 					throw new ColumnDoesNotExistException(msg);
 				}
 				// otherwise we will never find anything over here
 
 			}
-			for (String v : f.getValues())
-				filtersByColumn.get(f.getField()).add(v);
+			for (String v : filter.getValues())
+				filtersByColumn.get(filter.getField()).add(v);
 		}
 		for (Entry<String, Set<String>> e : filtersByColumn.entrySet()) {
 			String fieldName = e.getKey();
