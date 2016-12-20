@@ -120,7 +120,7 @@ public class OffHeapPartition implements Partition {
 	}
 
 	// TODO: refactor to accept int[], long[]
-	protected void insertFields(short[] fields, Map<String, Long> metrics) {
+	protected void insertFields(short[] fields, Map<String, Long> newMetrics) {
 		ByteBuffer buf = ByteBuffer.allocate(fields.length * Short.BYTES);
 		buf.clear();
 		for (short f : CubeUtils.cutZeroSuffix(fields))
@@ -132,8 +132,8 @@ public class OffHeapPartition implements Partition {
 		Integer index = this.map.get(bytes);
 
 		// 1. Check if there are any new metrics
-		for (String metricName : metrics.keySet()) {
-			if (!this.metrics.containsKey(metricName)) {
+		for (String metricName : newMetrics.keySet()) {
+			if (!metrics.containsKey(metricName)) {
 				// log.info("New metric {} found", metricName);
 				if (size != 0)
 					throw new RuntimeException("Adding new metrics on fly is not implemented yet");
@@ -160,14 +160,14 @@ public class OffHeapPartition implements Partition {
 				}
 				col.append(fields[i]);
 			}
-			for (Entry<String, Metric> e : this.metrics.entrySet()) {
+			for (Entry<String, Metric> e : metrics.entrySet()) {
 				Metric m = e.getValue();
 				String metricName = e.getKey();
 				if (m.isTiny() && m.getNumRecords() > Constants.INITIAL_PARTITION_SIZE) {
 					// log.debug("Converting TinyMetric {} to OffHeap",
 					// metricName);
 					m = TinyUtils.tinyMetricToOffHeap((TinyMetric) m);
-					this.metrics.put(metricName, m);
+					metrics.put(metricName, m);
 				}
 				m.append(0l);
 			}
@@ -175,15 +175,13 @@ public class OffHeapPartition implements Partition {
 			size++;
 		}
 
-		// 3. Increment metrics by one
-		for (Entry<String, Metric> e : this.metrics.entrySet()) {
-			Long c = metrics.get(e.getKey()).longValue();
+		// 3. Increment metrics by values supplied.
+		for (Entry<String, Metric> e : metrics.entrySet()) {
+			Long c = newMetrics.get(e.getKey()).longValue();
 			if (c != null) {
 				e.getValue().incrementBy(index.intValue(), c.longValue());
 			}
-
 		}
-
 	}
 
 	protected void addNewFields(DataRow row) {
@@ -234,8 +232,8 @@ public class OffHeapPartition implements Partition {
 
 	@Override
 	public synchronized void insert(DataRow row) {
-		this._insert(row);
-		this.lastInsertTs = System.currentTimeMillis();
+		_insert(row);
+		lastInsertTs = System.currentTimeMillis();
 	}
 
 	public void insertData(List<DataRow> data) {
