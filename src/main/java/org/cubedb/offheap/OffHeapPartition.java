@@ -126,8 +126,8 @@ public class OffHeapPartition implements Partition {
 		for (short f : CubeUtils.cutZeroSuffix(fields))
 			buf.putShort(f);
 		byte[] bytes = buf.array();
-		if (this.map == null) {
-			this.initializeMap();
+		if (map == null) {
+			initializeMap();
 		}
 		Integer index = this.map.get(bytes);
 
@@ -147,16 +147,16 @@ public class OffHeapPartition implements Partition {
 			// log.debug("Inserting new combination of dimensions into
 			// partition");
 			index = new Integer(size);
-			this.map.put(bytes, index);
+			map.put(bytes, index);
 			for (int i = 0; i < fields.length; i++) {
-				String fieldName = this.fieldLookup.getKey(i);
+				String fieldName = fieldLookup.getKey(i);
 				// log.debug("Writing {}={} to buffers", fieldName, fields[i]);
-				Column col = this.columns.get(fieldName);
+				Column col = columns.get(fieldName);
 				if (col.isTiny() && col.getNumRecords() > Constants.INITIAL_PARTITION_SIZE) {
 					// log.debug("There are {} records, converting TinyColumn {}
 					// to OffHeap", col.getNumRecords(), fieldName);
 					col = TinyUtils.tinyColumnToOffHeap((TinyColumn) col);
-					this.columns.put(fieldName, col);
+					columns.put(fieldName, col);
 				}
 				col.append(fields[i]);
 			}
@@ -171,7 +171,7 @@ public class OffHeapPartition implements Partition {
 				}
 				m.append(0l);
 			}
-			this.lastAppendTs = System.currentTimeMillis();
+			lastAppendTs = System.currentTimeMillis();
 			size++;
 		}
 
@@ -195,25 +195,25 @@ public class OffHeapPartition implements Partition {
 		if (newFields.size() > 0) {
 			for (String f : newFields) {
 				final int newColumnIndex = this.fieldLookup.getValue(f);
-				this.lookups.put(f, new HashMapLookup());
+				lookups.put(f, new HashMapLookup());
 				// log.debug("Index for {} is {}", f, newColumnIndex);
-				this.columns.put(f, new TinyColumn(this.size));
+				columns.put(f, new TinyColumn(this.size));
 			}
-			this._insert(row);
+			_insert(row);
 		}
 	}
 
 	protected void _insert(DataRow row) {
-		short[] fields = new short[this.fieldLookup.size()];
+		short[] fields = new short[fieldLookup.size()];
 		int i = 0;
 
 		int insertedFieldCount = 0;
-		for (String fieldName : this.fieldLookup.getKeys()) {
+		for (String fieldName : fieldLookup.getKeys()) {
 			String value = row.getFields().get(fieldName);
 			int valueIndex = 0;
 			if (value != null || row.getFields().containsKey(fieldName)) {
 				insertedFieldCount++;
-				valueIndex = this.lookups.get(fieldName).getValue(value != null ? value : Constants.NULL_VALUE);
+				valueIndex = lookups.get(fieldName).getValue(value != null ? value : Constants.NULL_VALUE);
 				// log.debug("Index for value {}.{} is {}", fieldName, value,
 				// valueIndex);
 			}
@@ -225,9 +225,9 @@ public class OffHeapPartition implements Partition {
 		if (insertedFieldCount != row.getFields().size()) {
 			// log.info("Inserted {} fields, but the row has {} fields",
 			// insertedFieldCount, row.getFields().size());
-			this.addNewFields(row);
+			addNewFields(row);
 		} else {
-			this.insertFields(fields, row.getCounters());
+			insertFields(fields, row.getCounters());
 		}
 
 	}
