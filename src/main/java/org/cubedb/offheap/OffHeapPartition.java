@@ -38,12 +38,15 @@ public class OffHeapPartition implements Partition {
 
 	private final static int FAKE_GROUP_VALUE_ID = 0;
 
-	// Field name -> field value -> value ID
+	// Field name -> field value <--> value ID
 	protected Map<String, Lookup> lookups;
+	// Field name <--> fieldId
 	protected Lookup fieldLookup;
+	// Metric field name <--> metric field ID
 	protected Lookup metricLookup;
+	// Field name (== column name) -> a data column
 	protected Map<String, Column> columns;
-	// Cumulative metrics partition data metrics: metric name -> metric value.
+	// Cumulative partition data metrics: metric name -> metric value.
 	protected Map<String, Metric> metrics;
 	// Number of rows in the partition.
 	protected int size;
@@ -321,7 +324,9 @@ public class OffHeapPartition implements Partition {
 	protected Column[] getColumnsAsArray() {
 		final Column[] columnsArray = new Column[columns.size()];
 		for (Entry<String, Column> e : columns.entrySet()) {
-			columnsArray[fieldLookup.getValue(e.getKey())] = e.getValue();
+			String fieldName = e.getKey();
+			int fieldId = fieldLookup.getValue(fieldName);
+			columnsArray[fieldId] = e.getValue();
 		}
 		return columnsArray;
 	}
