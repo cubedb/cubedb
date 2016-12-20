@@ -53,39 +53,39 @@ public class OffHeapPartition implements Partition {
 
 	public OffHeapPartition() {
 		// log.debug("Initializing Partition");
-		this.lookups = new HashMap<String, Lookup>(5);
-		this.fieldLookup = new HashMapLookup(false);
-		this.columns = new HashMap<String, Column>(5);
-		this.metrics = new HashMap<String, Metric>(1);
-		this.metricLookup = new HashMapLookup(false);
+		lookups = new HashMap<String, Lookup>(5);
+		fieldLookup = new HashMapLookup(false);
+		columns = new HashMap<String, Column>(5);
+		metrics = new HashMap<String, Metric>(1);
+		metricLookup = new HashMapLookup(false);
 		// this.createMap(1);
 
 	}
 
 	protected void addColumn(String columnName) {
 		Column col = new TinyColumn(size);
-		this.columns.putIfAbsent(columnName, col);
+		columns.putIfAbsent(columnName, col);
 	}
 
 	protected void addMetric(String metricName) {
 		Metric m = new TinyMetric(size);
-		this.metrics.putIfAbsent(metricName, m);
-		this.metricLookup.getValue(metricName);
+		metrics.putIfAbsent(metricName, m);
+		metricLookup.getValue(metricName);
 	}
 
 	protected void createMap(int fieldsLength) {
 		// this.map = new MapDBKeyMap(size, fieldsLength);
-		this.map = new BOHKeyMap(size, fieldsLength);
+		map = new BOHKeyMap(size, fieldsLength);
 	}
 
 	protected void initializeMap() {
 		log.debug("Re-Initializing map");
 		long t0 = System.currentTimeMillis();
 		final Column[] fields = new Column[fieldLookup.getKeys().length];
-		Metric[] metrics = new Metric[this.metrics.size()];
-		// int fieldValues[] = new int[fields.length];
-		for (int i = 0; i < metrics.length; i++) {
-			metrics[i] = this.metrics.get(this.metricLookup.getKey(i));
+		Metric[] newMetrics = new Metric[metrics.size()];
+
+		for (int i = 0; i < newMetrics.length; i++) {
+			newMetrics[i] = metrics.get(metricLookup.getKey(i));
 		}
 
 		for (int i = 0; i < fields.length; i++) {
@@ -93,36 +93,27 @@ public class OffHeapPartition implements Partition {
 			fields[i] = columns.get(fieldKey);
 		}
 
-		this.createMap(fields.length);
+		createMap(fields.length);
 
 		byte[] b = new byte[fields.length * Short.BYTES];
 		ByteBuffer bb = ByteBuffer.wrap(b);
 		int j = 0;
-		long[] metricValues = new long[metrics.length];
 		for (int i = 0; i < size; i++) {
 			bb.clear();
-			for (int m = 0; m < metrics.length; m++) {
-				metricValues[m] += metrics[m].get(i);
-			}
 			for (j = 0; j < fields.length; j++) {
 				Column c = fields[j];
 				short val = (short) c.get(i);
 				bb.putShort(val);
-
 			}
-
-			this.map.put(b, i);
+			map.put(b, i);
 		}
-		// log.debug("Done initializing map. Took {}ms",
-		// System.currentTimeMillis() - t0);
-		// System.gc();
 	}
 
 	@Override
 	public boolean optimize() {
 		long ts = System.currentTimeMillis();
-		if (ts - this.lastInsertTs > Constants.KEY_MAP_TTL) {
-			this.map = null;
+		if (ts - lastInsertTs > Constants.KEY_MAP_TTL) {
+			map = null;
 			return true;
 		}
 		return false;
