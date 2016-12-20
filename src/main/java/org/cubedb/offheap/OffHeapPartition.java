@@ -38,11 +38,14 @@ public class OffHeapPartition implements Partition {
 
 	private final static int FAKE_GROUP_VALUE_ID = 0;
 
+	// Field name -> field value -> value ID
 	protected Map<String, Lookup> lookups;
 	protected Lookup fieldLookup;
 	protected Lookup metricLookup;
 	protected Map<String, Column> columns;
+	// Cumulative metrics partition data metrics: metric name -> metric value.
 	protected Map<String, Metric> metrics;
+	// Number of rows in the partition.
 	protected int size;
 	protected KeyMap map;
 	private static final Logger log = LoggerFactory.getLogger(OffHeapPartition.class);
@@ -58,7 +61,6 @@ public class OffHeapPartition implements Partition {
 		columns = new HashMap<String, Column>(5);
 		metrics = new HashMap<String, Metric>(1);
 		metricLookup = new HashMapLookup(false);
-		// this.createMap(1);
 
 	}
 
@@ -137,7 +139,7 @@ public class OffHeapPartition implements Partition {
 				// log.info("New metric {} found", metricName);
 				if (size != 0)
 					throw new RuntimeException("Adding new metrics on fly is not implemented yet");
-				this.addMetric(metricName);
+				addMetric(metricName);
 			}
 		}
 
@@ -179,7 +181,8 @@ public class OffHeapPartition implements Partition {
 		for (Entry<String, Metric> e : metrics.entrySet()) {
 			Long c = newMetrics.get(e.getKey()).longValue();
 			if (c != null) {
-				e.getValue().incrementBy(index.intValue(), c.longValue());
+				Metric metric = e.getValue();
+				metric.incrementBy(index.intValue(), c.longValue());
 			}
 		}
 	}
@@ -249,13 +252,13 @@ public class OffHeapPartition implements Partition {
 	protected Map<String, IdMatcher> transformFiltersToMatchers(List<Filter> filters)
 			throws ColumnDoesNotExistException {
 		// log.debug("List of filters: {}", filters);
-		Map<String, IdMatcher> out = new HashMap<String, IdMatcher>();
+		Map<String, IdMatcher> fieldNameToMatchers = new HashMap<String, IdMatcher>();
 		Map<String, Set<String>> filtersByColumn = new HashMap<String, Set<String>>();
-		for (String columnName : this.columns.keySet()) {
+		for (String columnName : columns.keySet()) {
 			filtersByColumn.put(columnName, new HashSet<String>());
 		}
 		for (Filter f : filters) {
-			if (!this.columns.containsKey(f.getField())) {
+			if (!columns.containsKey(f.getField())) {
 				// the column we are filtering for does not exist
 				// so, if we are looking for null value, then we are fine.
 				if (f.getValues().length == 1
@@ -273,16 +276,18 @@ public class OffHeapPartition implements Partition {
 				filtersByColumn.get(f.getField()).add(v);
 		}
 		for (Entry<String, Set<String>> e : filtersByColumn.entrySet()) {
-			int[] idList = e.getValue().stream().mapToInt((val) -> this.lookups.get(e.getKey()).getValue(val))
-					.toArray();
-			if (idList.length > 0) {
-				// log.debug("Transforming values of {} to {} in {}",
-				// e.getValue(), idList, e.getKey());
-				out.put(e.getKey(), new IdMatcher(idList));
+			String fieldName = e.getKey();
+			Lookup valueIdLookup = lookups.get(fieldName);
+			int[] valueIdList = e.getValue()
+				.stream()
+				.mapToInt(fieldValue -> valueIdLookup.getValue(fieldValue))
+				.toArray();
+			if (valueIdList.length > 0) {
+				fieldNameToMatchers.put(fieldName, new IdMatcher(valueIdList));
 			}
 		}
-		// log.debug("Resulting id matchers: {}", out);
-		return out;
+		// log.debug("Resulting id matchers: {}", fieldNameToMatchers);
+		return fieldNameToMatchers;
 
 	}
 
