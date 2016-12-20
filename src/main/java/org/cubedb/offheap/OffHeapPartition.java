@@ -247,8 +247,7 @@ public class OffHeapPartition implements Partition {
 		log.info("That is {} rows/sec", rowsPerSecond);
 	}
 
-	protected Map<String, IdMatcher> transformFiltersToMatchers(List<Filter> filters)
-			throws ColumnDoesNotExistException {
+	protected Map<String, IdMatcher> transformFiltersToMatchers(List<Filter> filters) {
 		// log.debug("List of filters: {}", filters);
 		Map<String, IdMatcher> fieldNameToMatchers = new HashMap<String, IdMatcher>();
 		Map<String, Set<String>> filtersByColumn = new HashMap<String, Set<String>>();
@@ -256,19 +255,6 @@ public class OffHeapPartition implements Partition {
 			filtersByColumn.put(columnName, new HashSet<String>());
 		}
 		for (Filter filter : filters) {
-			if (!columns.containsKey(filter.getField())) {
-				// the column we are filtering for does not exist
-				// so, if we are looking for null value, then we are fine.
-				if (filter.isNullValueFilter()) {
-					log.info("There is only one null value");
-					continue;
-				} else {
-					final String msg = String.format("Column %s does not exist in this partition", filter.getField());
-					throw new ColumnDoesNotExistException(msg);
-				}
-				// otherwise we will never find anything over here
-
-			}
 			for (String v : filter.getValues())
 				filtersByColumn.get(filter.getField()).add(v);
 		}
@@ -336,6 +322,12 @@ public class OffHeapPartition implements Partition {
 		long t0 = System.nanoTime(); // debug purposes
 		int curSize = size; // current max index of rows in the db
 
+		/*
+		 * If filters require non-existing columns we can skip the search altogether.
+		 */
+		if (!checkAllFilterColumnsExist(filters)) {
+			return SearchResult.buildEmpty(metrics.keySet());
+		}
 
 		// creating an empty result set, with id's
 		final String[] metricNames = metricLookup.getKeys();
@@ -401,108 +393,103 @@ public class OffHeapPartition implements Partition {
 		 */
 		final IdMatcher[] matchersArray = new IdMatcher[fieldLookup.size()];
 		final Metric[] metricsArray = new Metric[metricLookup.size()];
-		try {
 
-			/*
-			 * Filters are specification of criterias using strings. Here they
-			 * are transformed to an efficient representation, functions that
-			 * match using integer ids
-			 */
-			final Map<String, IdMatcher> matchers = transformFiltersToMatchers(filters);
+		/*
+		 * Filters are specification of criterias using strings. Here they
+		 * are transformed to an efficient representation, functions that
+		 * match using integer ids
+		 */
+		final Map<String, IdMatcher> matchers = transformFiltersToMatchers(filters);
 
-			for (Entry<String, IdMatcher> e : matchers.entrySet()) {
-				int fieldId = fieldLookup.getValue(e.getKey());
-				matchersArray[fieldId] = e.getValue();
-			}
-
-			/*
-			 * Here we get transform Map of metrics to an array of metrics. Note
-			 * that in 99% of cases there is only one metric
-			 */
-			for (Entry<String, Metric> e : metrics.entrySet()) {
-				int fieldId = metricLookup.getValue(e.getKey());
-				metricsArray[fieldId] = e.getValue();
-			}
-
-			/*
-			 * Here starts the brute-force scanning. Operations in this block
-			 * have to be as fast as possible
-			 */
-
-			final int fieldLookupSize = fieldLookup.size();
-			t2 = System.nanoTime();
-			for (int i = 0; i < curSize; i++) {
-				/*
-				 * Here we do not retrieve values of all columns. We only get
-				 * those which are related to a filter/matcher
-				 */
-				for (int matcherId = 0; matcherId < matchersArray.length; matcherId++) {
-					IdMatcher matcher = matchersArray[matcherId];
-					columnMatches[matcherId] = true;
-					final int valueId = columns[matcherId].get(i);
-					columnValues[matcherId] = valueId;
-					if (matcher != null) {
-						columnMatches[matcherId] = matcher.match(valueId);
-					}
-				}
-
-				/*
-				 * At least one of the filters was matched. We need this row
-				 */
-				if (atLeastOneMatch(columnMatches)) {
-					matchCount++;
-					/*
-					 * We have a match! First, we retrieve the counters values
-					 * for this row
-					 */
-					for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-						final long c = metricsArray[mIndex].get(i);
-						metricValues[mIndex] = c;
-					}
-
-					/*
-					 * Then, check if all columns of a row match. Increase the
-					 * totalCounters if positive.
-					 */
-					if (checkAllMatch(columnMatches)) {
-						for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-							totalCounters[mIndex] += metricValues[mIndex];
-						}
-					}
-
-					/*
-					 * Find out the value of the field to group by for the i-th row.
-					 */
-					final int groupFieldValueId = doFieldGrouping ? columns[groupFieldId].get(i): FAKE_GROUP_VALUE_ID;
-
-					/*
-					 * Last, retrieve the values of all columns. For each side,
-					 * we increment the side counter, but only when *other* side
-					 * filters match.
-					 */
-					for (int fieldId = 0; fieldId < fieldLookupSize; fieldId++) {
-						/*
-						 * We don't care if the current side filter is applied
-						 * or not - it should only influence *other* side
-						 * filtering.
-						 */
-						if (!checkOtherMatch(columnMatches, fieldId)) {
-							continue;
-						}
-
-						final int columnValueId = columnValues[fieldId];
-						for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-							sideCounters[fieldId][columnValueId][groupFieldValueId][mIndex] += metricValues[mIndex];
-						}
-					}
-				}
-			}
-			t3 = System.nanoTime();
-
-		} catch (ColumnDoesNotExistException e) {
-			log.warn(e.getMessage());
-			return SearchResult.buildEmpty(metrics.keySet());
+		for (Entry<String, IdMatcher> e : matchers.entrySet()) {
+			int fieldId = fieldLookup.getValue(e.getKey());
+			matchersArray[fieldId] = e.getValue();
 		}
+
+		/*
+		 * Here we get transform Map of metrics to an array of metrics. Note
+		 * that in 99% of cases there is only one metric
+		 */
+		for (Entry<String, Metric> e : metrics.entrySet()) {
+			int fieldId = metricLookup.getValue(e.getKey());
+			metricsArray[fieldId] = e.getValue();
+		}
+
+		/*
+		 * Here starts the brute-force scanning. Operations in this block
+		 * have to be as fast as possible
+		 */
+
+		final int fieldLookupSize = fieldLookup.size();
+		t2 = System.nanoTime();
+		for (int i = 0; i < curSize; i++) {
+			/*
+			 * Here we do not retrieve values of all columns. We only get
+			 * those which are related to a filter/matcher
+			 */
+			for (int matcherId = 0; matcherId < matchersArray.length; matcherId++) {
+				IdMatcher matcher = matchersArray[matcherId];
+				columnMatches[matcherId] = true;
+				final int valueId = columns[matcherId].get(i);
+				columnValues[matcherId] = valueId;
+				if (matcher != null) {
+					columnMatches[matcherId] = matcher.match(valueId);
+				}
+			}
+
+			/*
+			 * At least one of the filters was matched. We need this row
+			 */
+			if (atLeastOneMatch(columnMatches)) {
+				matchCount++;
+				/*
+				 * We have a match! First, we retrieve the counters values
+				 * for this row
+				 */
+				for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
+					final long c = metricsArray[mIndex].get(i);
+					metricValues[mIndex] = c;
+				}
+
+				/*
+				 * Then, check if all columns of a row match. Increase the
+				 * totalCounters if positive.
+				 */
+				if (checkAllMatch(columnMatches)) {
+					for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
+						totalCounters[mIndex] += metricValues[mIndex];
+					}
+				}
+
+				/*
+				 * Find out the value of the field to group by for the i-th row.
+				 */
+				final int groupFieldValueId = doFieldGrouping ? columns[groupFieldId].get(i): FAKE_GROUP_VALUE_ID;
+
+				/*
+				 * Last, retrieve the values of all columns. For each side,
+				 * we increment the side counter, but only when *other* side
+				 * filters match.
+				 */
+				for (int fieldId = 0; fieldId < fieldLookupSize; fieldId++) {
+					/*
+					 * We don't care if the current side filter is applied
+					 * or not - it should only influence *other* side
+					 * filtering.
+					 */
+					if (!checkOtherMatch(columnMatches, fieldId)) {
+						continue;
+					}
+
+					final int columnValueId = columnValues[fieldId];
+					for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
+						sideCounters[fieldId][columnValueId][groupFieldValueId][mIndex] += metricValues[mIndex];
+					}
+				}
+			}
+		}
+		t3 = System.nanoTime();
+
 		final long t_pre_build = System.nanoTime();
 		final SearchResult result = SearchResult.buildFromResultArray(
 			  sideCounters, totalCounters,
@@ -520,6 +507,20 @@ public class OffHeapPartition implements Partition {
 		}
 		return result;
 
+	}
+
+	private boolean checkAllFilterColumnsExist(List<Filter> filters) {
+		for (Filter filter : filters) {
+			String fieldName = filter.getField();
+			if (columns.containsKey(fieldName)) {
+				continue;
+			}
+			if (filter.isNullValueFilter()) {
+				continue;
+			}
+			return false;
+		}
+		return true;
 	}
 
 	private boolean checkAllMatch(boolean[] matches) {
