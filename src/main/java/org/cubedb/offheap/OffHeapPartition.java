@@ -83,13 +83,8 @@ public class OffHeapPartition implements Partition {
 	protected void initializeMap() {
 		log.debug("Re-Initializing map");
 		long t0 = System.currentTimeMillis();
+
 		final Column[] fields = new Column[fieldLookup.getKeys().length];
-		Metric[] newMetrics = new Metric[metrics.size()];
-
-		for (int i = 0; i < newMetrics.length; i++) {
-			newMetrics[i] = metrics.get(metricLookup.getKey(i));
-		}
-
 		for (int i = 0; i < fields.length; i++) {
 			String fieldKey = fieldLookup.getKey(i);
 			fields[i] = columns.get(fieldKey);
