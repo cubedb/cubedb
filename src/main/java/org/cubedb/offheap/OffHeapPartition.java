@@ -292,30 +292,27 @@ public class OffHeapPartition implements Partition {
 	}
 
 	protected long[][][][] initSideCounters() {
-		// log.debug("Metrics look like this: {}",
-		// (Object)this.metricLookup.getKeys());
-		final long[][][][] out = new long[this.fieldLookup.size()][][][];
-		for (int i = 0; i < this.fieldLookup.size(); i++) {
-			String fieldName = this.fieldLookup.getKey(i);
-			Lookup side = this.lookups.get(fieldName);
-			long[][][] sideCounters = new long[side.size()][1][this.metricLookup.size()];
+		final long[][][][] out = new long[fieldLookup.size()][][][];
+		for (int i = 0; i < fieldLookup.size(); i++) {
+			String fieldName = fieldLookup.getKey(i);
+			Lookup side = lookups.get(fieldName);
+			long[][][] sideCounters = new long[side.size()][1][metricLookup.size()];
 			for (int s = 0; s < sideCounters.length; s++)
-				for (int m = 0; m < this.metricLookup.size(); m++)
+				for (int m = 0; m < metricLookup.size(); m++)
 					sideCounters[s][FAKE_GROUP_VALUE_ID][m] = 0l;
 			out[i] = sideCounters;
 		}
-		// log.debug("Initial counters look like this {}", (Object)out);
 		return out;
 	}
 
 	protected long[][][][] initGroupedSideCounters(final String groupFieldName) {
-		final long[][][][] out = new long[this.fieldLookup.size()][][][];
-		final Lookup groupSide = this.lookups.get(groupFieldName);
-		final int metricLookupSize = this.metricLookup.size();
-		final int lookupSize = this.fieldLookup.size();
+		final long[][][][] out = new long[fieldLookup.size()][][][];
+		final Lookup groupSide = lookups.get(groupFieldName);
+		final int metricLookupSize = metricLookup.size();
+		final int lookupSize = fieldLookup.size();
 		for (int f = 0; f < lookupSize; f++) {
-			String fieldName = this.fieldLookup.getKey(f);
-			Lookup side = this.lookups.get(fieldName);
+			String fieldName = fieldLookup.getKey(f);
+			Lookup side = lookups.get(fieldName);
 			long[][][] sideCounters = new long[side.size()][groupSide.size()][metricLookupSize];
 			for (int s = 0; s < sideCounters.length; s++)
 				for (int g = 0; g < groupSide.size(); g++)
@@ -327,11 +324,11 @@ public class OffHeapPartition implements Partition {
 	}
 
 	protected Column[] getColumnsAsArray() {
-		final Column[] columns = new Column[this.columns.size()];
-		for (Entry<String, Column> e : this.columns.entrySet()) {
-			columns[this.fieldLookup.getValue(e.getKey())] = e.getValue();
+		final Column[] columnsArray = new Column[columns.size()];
+		for (Entry<String, Column> e : columns.entrySet()) {
+			columnsArray[fieldLookup.getValue(e.getKey())] = e.getValue();
 		}
-		return columns;
+		return columnsArray;
 	}
 
 	@Override
