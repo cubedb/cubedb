@@ -3,6 +3,7 @@ package org.cubedb.core.beans;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
+import java.util.Collections;
 import org.cubedb.core.lookups.Lookup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,22 +21,22 @@ public class SearchResult {
 	public final static String FAKE_GROUP_FIELD_VALUE = "DEFAULT_GROUP_FIELD_VALUE";
 
 	Map<GroupedSearchResultRow, Long> results;
-	Map<String, Long> totalCounts;
+	Map<String, Map<String, Long>> totalCounts;
 
 	public static SearchResult buildEmpty(Set<String> metricNames) {
-		Map<String, Long> totalCounts = new HashMap<String, Long>();
+		Map<String, Map<String, Long>> totalCounts = new HashMap<String, Map<String, Long>>();
 		for (String metricName : metricNames) {
-			totalCounts.put(metricName, 0l);
+			Map<String, Long> groupFieldValueToCounter = new HashMap<String, Long>();
+			totalCounts.put(metricName, groupFieldValueToCounter);
 		}
 		SearchResult r = new SearchResult(new HashMap<GroupedSearchResultRow, Long>(),
 										  totalCounts);
 		return r;
 	}
 
-
 	// TODO: re-implement with using a list instead of hashmap.
 	public static SearchResult buildFromResultArray(long[][][][] sideCounters,
-													long[] totalCounters,
+													long[][] totalCounters,
 													boolean isGroupLookup,
 													String groupFieldName,
 													Map<String, Lookup> lookups,
@@ -71,14 +72,21 @@ public class SearchResult {
 		}
 		log.debug("Result size is {}", groupedResult.size());
 
-		Map<String, Long> totalCounts = new HashMap<String, Long>(totalCounters.length);
-		for (int i = 0; i < totalCounters.length; i++)
-			totalCounts.put(metricLookup.getKey(i), totalCounters[i]);
+		Map<String, Map<String, Long>> totalCounts = new HashMap<String, Map<String, Long>>(totalCounters.length);
+		for (int m = 0; m < totalCounters.length; m++) {
+			Map<String, Long> groupValueToCounter = new HashMap(totalCounters[m].length);
+			for (int g = 0; g < totalCounters[m].length; g++) {
+				String groupFieldValue = isGroupLookup ? groupFieldLookup.getKey(g) : FAKE_GROUP_FIELD_VALUE;
+				groupValueToCounter.put(groupFieldValue, totalCounters[m][g]);
+			}
+			totalCounts.put(metricLookup.getKey(m), groupValueToCounter);
+		}
 		// log.debug("Converted {} to {}", sideCounters, result);
 		return new SearchResult(groupedResult, totalCounts);
 	}
 
-	public SearchResult(Map<GroupedSearchResultRow, Long> groupedResults, Map<String, Long> totalCounts) {
+	public SearchResult(Map<GroupedSearchResultRow, Long> groupedResults,
+						Map<String, Map<String, Long>> totalCounts) {
 		super();
 		this.results = groupedResults;
 		this.totalCounts = totalCounts;
@@ -92,12 +100,8 @@ public class SearchResult {
 		this.results = results;
 	}
 
-	public Map<String, Long> getTotalCounts() {
+	public Map<String, Map<String, Long>> getTotalCounts() {
 		return totalCounts;
-	}
-
-	public void setTotalCounts(Map<String, Long> totalCounts) {
-		this.totalCounts = totalCounts;
 	}
 
 	@Override

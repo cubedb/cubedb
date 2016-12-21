@@ -322,13 +322,6 @@ public class OffHeapPartition implements Partition {
 		long t0 = System.nanoTime(); // debug purposes
 		int curSize = size; // current max index of rows in the db
 
-		/*
-		 * If filters require non-existing columns we can skip the search altogether.
-		 */
-		if (!checkAllFilterColumnsExist(filters)) {
-			return SearchResult.buildEmpty(metrics.keySet());
-		}
-
 		// a field to use for result grouping
 		final boolean doFieldGrouping = groupFieldName != null;
 
@@ -338,6 +331,13 @@ public class OffHeapPartition implements Partition {
 		 */
 		if (doFieldGrouping && !fieldLookup.containsValue(groupFieldName)) {
 			log.warn(String.format("Grouping column %s does not exist in this partition", groupFieldName));
+			return SearchResult.buildEmpty(metrics.keySet());
+		}
+
+		/*
+		 * If filters require non-existing columns we can skip the search altogether.
+		 */
+		if (!checkAllFilterColumnsExist(filters)) {
 			return SearchResult.buildEmpty(metrics.keySet());
 		}
 
@@ -359,7 +359,9 @@ public class OffHeapPartition implements Partition {
 
 		// creating an empty result set, with id's
 		final String[] metricNames = metricLookup.getKeys();
-		final long[] totalCounters = new long[metricNames.length];
+		// metric name -> group value id -> counter
+		int groupFieldValueCount = doFieldGrouping ? lookups.get(groupFieldName).size() : 1;
+		final long[][] totalCounters = new long[metricNames.length][groupFieldValueCount];
 
 		final Column[] columns = getColumnsAsArray();
 
@@ -453,19 +455,19 @@ public class OffHeapPartition implements Partition {
 				}
 
 				/*
+				 * Find out the value of the field to group by for the i-th row.
+				 */
+				final int groupFieldValueId = doFieldGrouping ? columns[groupFieldId].get(i): FAKE_GROUP_VALUE_ID;
+
+				/*
 				 * Then, check if all columns of a row match. Increase the
 				 * totalCounters if positive.
 				 */
 				if (checkAllMatch(columnMatches)) {
 					for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-						totalCounters[mIndex] += metricValues[mIndex];
+						totalCounters[mIndex][groupFieldValueId] += metricValues[mIndex];
 					}
 				}
-
-				/*
-				 * Find out the value of the field to group by for the i-th row.
-				 */
-				final int groupFieldValueId = doFieldGrouping ? columns[groupFieldId].get(i): FAKE_GROUP_VALUE_ID;
 
 				/*
 				 * Last, retrieve the values of all columns. For each side,
