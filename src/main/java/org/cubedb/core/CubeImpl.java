@@ -172,11 +172,11 @@ public class CubeImpl implements Cube {
 
 		@Override
 		public void run() {
-			this.result = get(partitions, filters, fromPartition, toPartition, groupBy);
+			result = get(partitions, filters, fromPartition, toPartition, groupBy);
 		}
 
 		public Map<GroupedSearchResultRow, MutableLong> getResult() {
-			return this.result;
+			return result;
 		};
 
 	}
@@ -187,9 +187,9 @@ public class CubeImpl implements Cube {
 		List<Pair<String, Partition>> partitions = this.partitions.entrySet().stream()
 				.filter((e) -> e.getKey().compareTo(fromPartition) >= 0 && e.getKey().compareTo(toPartition) <= 0)
 				.map(e -> new Pair<String, Partition>(e.getKey(), e.getValue())).collect(Collectors.toList());
-		List<Filter> realFilters = filters.stream().filter((f) -> !f.getField().equals(this.partitionColumn))
+		List<Filter> realFilters = filters.stream().filter((f) -> !f.getField().equals(partitionColumn))
 				.collect(Collectors.toList());
-		List<Filter> partitionFilters = filters.stream().filter((f) -> f.getField().equals(this.partitionColumn))
+		List<Filter> partitionFilters = filters.stream().filter((f) -> f.getField().equals(partitionColumn))
 				.collect(Collectors.toList());
 
 		final String fromPartitionFilter = partitionFilters.stream()
@@ -237,7 +237,7 @@ public class CubeImpl implements Cube {
 
 	@Override
 	public void deletePartition(String partitionName) {
-		this.partitions.remove(partitionName);
+		partitions.remove(partitionName);
 
 	}
 
@@ -256,9 +256,11 @@ public class CubeImpl implements Cube {
 
 	@Override
 	public TreeSet<String> getPartitions(final String from, final String to) {
-		return this.partitions.keySet().stream().filter(p -> from == null || from.compareTo(p) <= 0)
-				.filter(p -> from == null || to.compareTo(p) >= 0).sorted()
-				.collect(Collectors.toCollection(() -> new TreeSet<String>()));
+		return partitions.keySet()
+			.stream()
+			.filter(p -> from == null || from.compareTo(p) <= 0)
+			.filter(p -> from == null || to.compareTo(p) >= 0).sorted()
+			.collect(Collectors.toCollection(() -> new TreeSet<String>()));
 	}
 
 	@Override
@@ -266,7 +268,7 @@ public class CubeImpl implements Cube {
 		Kryo kryo = CubeUtils.getKryoWithRegistrations();
 		OutputStream zip = new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(saveFileName)));
 		Output output = new Output(zip);
-		kryo.writeClassAndObject(output, this.partitions);
+		kryo.writeClassAndObject(output, partitions);
 		// zip.closeEntry();
 		output.close();
 		// zip.close();
@@ -278,7 +280,7 @@ public class CubeImpl implements Cube {
 		Log.TRACE();
 		InputStream zip = new GZIPInputStream(new BufferedInputStream(new FileInputStream(saveFileName)));
 		Input input = new Input(zip);
-		this.partitions = (Map<String, Partition>) kryo.readClassAndObject(input);
+		partitions = (Map<String, Partition>) kryo.readClassAndObject(input);
 		input.close();
 		System.gc();
 		// zip.close();
@@ -286,7 +288,7 @@ public class CubeImpl implements Cube {
 
 	@Override
 	public Map<String, Object> getStats() {
-		Map<String, Map<String, Object>> partitionStats = this.partitions.entrySet().stream().collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getStats()));
+		Map<String, Map<String, Object>> partitionStats = partitions.entrySet().stream().collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getStats()));
 		Map<String, Object> out = new HashMap<String, Object>();
 		//out.put("partitionStats", partitionStats);
 		out.put(Constants.STATS_COLUMN_SIZE, partitionStats.values().stream().mapToLong(e -> (Long)e.get(Constants.STATS_COLUMN_SIZE)).sum());
@@ -305,13 +307,11 @@ public class CubeImpl implements Cube {
 		Genson g = new Genson();
 		try {
 			PrintStream p = new PrintStream(new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(saveFileName))));
-			this.partitions
-				.entrySet()
+			partitions.entrySet()
 				.stream()
 				.flatMap( (e) -> e.getValue()
-							.asDataRowStream()
-							.peek((row) -> row.setPartition(e.getKey()))
-						)
+						  .asDataRowStream()
+						  .peek((row) -> row.setPartition(e.getKey())))
 				.peek( (row) -> row.setCubeName(cubeName))
 				.map( (row) -> g.serialize(row))
 				.forEach((rowString) -> p.println(rowString));
