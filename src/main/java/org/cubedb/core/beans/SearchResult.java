@@ -33,7 +33,7 @@ public class SearchResult {
 	}
 
 
-	//TODO: re-implement with using a list instead of hashmap.
+	// TODO: re-implement with using a list instead of hashmap.
 	public static SearchResult buildFromResultArray(long[][][][] sideCounters,
 													long[] totalCounters,
 													boolean isGroupLookup,
