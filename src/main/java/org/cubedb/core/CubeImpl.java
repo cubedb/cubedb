@@ -185,9 +185,11 @@ public class CubeImpl implements Cube {
 	@Override
 	public Map<GroupedSearchResultRow, Long> get(final String fromPartition, final String toPartition, List<Filter> filters, String groupBy) {
 		long t0 = System.currentTimeMillis();
-		List<Pair<String, Partition>> partitions = this.partitions.entrySet().stream()
-				.filter((e) -> e.getKey().compareTo(fromPartition) >= 0 && e.getKey().compareTo(toPartition) <= 0)
-				.map(e -> new Pair<String, Partition>(e.getKey(), e.getValue())).collect(Collectors.toList());
+		List<Pair<String, Partition>> namePartitionPair = partitions.entrySet()
+			.stream()
+			.filter((e) -> e.getKey().compareTo(fromPartition) >= 0 && e.getKey().compareTo(toPartition) <= 0)
+			.map(e -> new Pair<String, Partition>(e.getKey(), e.getValue()))
+			.collect(Collectors.toList());
 		List<Filter> realFilters = filters.stream().filter((f) -> !f.getField().equals(partitionColumn))
 				.collect(Collectors.toList());
 		List<Filter> partitionFilters = filters.stream().filter((f) -> f.getField().equals(partitionColumn))
@@ -199,8 +201,8 @@ public class CubeImpl implements Cube {
 		final String toPartitionFilter = partitionFilters.stream()
 				.map(f -> Arrays.stream(f.getValues()).max(String::compareTo).get()).max(String::compareTo)
 				.orElse(toPartition);
-		Collections.shuffle(partitions);
-		final List<List<Pair<String, Partition>>> partitionSlices = CubeUtils.partitionList(partitions);
+		Collections.shuffle(namePartitionPair);
+		final List<List<Pair<String, Partition>>> partitionSlices = CubeUtils.partitionList(namePartitionPair);
 		 //log.info("Partitions are distributed in this way: {}",
 		 //partitionSlices.stream().map( s -> s.stream().map(p ->
 		 //p.getT()).collect(Collectors.toList()).toString()).collect(Collectors.toList()));
