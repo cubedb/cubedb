@@ -38,11 +38,17 @@ public class OffHeapPartition implements Partition {
 
 	private final static int FAKE_GROUP_VALUE_ID = 0;
 
+	// Field name -> field value <--> value ID
 	protected Map<String, Lookup> lookups;
+	// Field name <--> fieldId
 	protected Lookup fieldLookup;
+	// Metric field name <--> metric field ID
 	protected Lookup metricLookup;
+	// Field name (== column name) -> a data column
 	protected Map<String, Column> columns;
+	// Cumulative partition data metrics: metric name -> metric value.
 	protected Map<String, Metric> metrics;
+	// Number of rows in the partition.
 	protected int size;
 	protected KeyMap map;
 	private static final Logger log = LoggerFactory.getLogger(OffHeapPartition.class);
@@ -53,100 +59,85 @@ public class OffHeapPartition implements Partition {
 
 	public OffHeapPartition() {
 		// log.debug("Initializing Partition");
-		this.lookups = new HashMap<String, Lookup>(5);
-		this.fieldLookup = new HashMapLookup(false);
-		this.columns = new HashMap<String, Column>(5);
-		this.metrics = new HashMap<String, Metric>(1);
-		this.metricLookup = new HashMapLookup(false);
-		// this.createMap(1);
+		lookups = new HashMap<String, Lookup>(5);
+		fieldLookup = new HashMapLookup(false);
+		columns = new HashMap<String, Column>(5);
+		metrics = new HashMap<String, Metric>(1);
+		metricLookup = new HashMapLookup(false);
 
 	}
 
 	protected void addColumn(String columnName) {
 		Column col = new TinyColumn(size);
-		this.columns.putIfAbsent(columnName, col);
+		columns.putIfAbsent(columnName, col);
 	}
 
 	protected void addMetric(String metricName) {
 		Metric m = new TinyMetric(size);
-		this.metrics.putIfAbsent(metricName, m);
-		this.metricLookup.getValue(metricName);
+		metrics.putIfAbsent(metricName, m);
+		metricLookup.getValue(metricName);
 	}
 
 	protected void createMap(int fieldsLength) {
-		// this.map = new MapDBKeyMap(size, fieldsLength);
-		this.map = new BOHKeyMap(size, fieldsLength);
+		// map = new MapDBKeyMap(size, fieldsLength);
+		map = new BOHKeyMap(size, fieldsLength);
 	}
 
 	protected void initializeMap() {
 		log.debug("Re-Initializing map");
 		long t0 = System.currentTimeMillis();
-		final Column[] fields = new Column[fieldLookup.getKeys().length];
-		Metric[] metrics = new Metric[this.metrics.size()];
-		// int fieldValues[] = new int[fields.length];
-		for (int i = 0; i < metrics.length; i++) {
-			metrics[i] = this.metrics.get(this.metricLookup.getKey(i));
-		}
 
+		final Column[] fields = new Column[fieldLookup.getKeys().length];
 		for (int i = 0; i < fields.length; i++) {
 			String fieldKey = fieldLookup.getKey(i);
 			fields[i] = columns.get(fieldKey);
 		}
 
-		this.createMap(fields.length);
+		createMap(fields.length);
 
 		byte[] b = new byte[fields.length * Short.BYTES];
 		ByteBuffer bb = ByteBuffer.wrap(b);
 		int j = 0;
-		long[] metricValues = new long[metrics.length];
 		for (int i = 0; i < size; i++) {
 			bb.clear();
-			for (int m = 0; m < metrics.length; m++) {
-				metricValues[m] += metrics[m].get(i);
-			}
 			for (j = 0; j < fields.length; j++) {
 				Column c = fields[j];
 				short val = (short) c.get(i);
 				bb.putShort(val);
-
 			}
-
-			this.map.put(b, i);
+			map.put(b, i);
 		}
-		// log.debug("Done initializing map. Took {}ms",
-		// System.currentTimeMillis() - t0);
-		// System.gc();
 	}
 
 	@Override
 	public boolean optimize() {
 		long ts = System.currentTimeMillis();
-		if (ts - this.lastInsertTs > Constants.KEY_MAP_TTL) {
-			this.map = null;
+		if (ts - lastInsertTs > Constants.KEY_MAP_TTL) {
+			map = null;
 			return true;
 		}
 		return false;
 	}
 
 	// TODO: refactor to accept int[], long[]
-	protected void insertFields(short[] fields, Map<String, Long> metrics) {
+	protected void insertFields(short[] fields, Map<String, Long> newMetrics) {
 		ByteBuffer buf = ByteBuffer.allocate(fields.length * Short.BYTES);
 		buf.clear();
 		for (short f : CubeUtils.cutZeroSuffix(fields))
 			buf.putShort(f);
 		byte[] bytes = buf.array();
-		if (this.map == null) {
-			this.initializeMap();
+		if (map == null) {
+			initializeMap();
 		}
-		Integer index = this.map.get(bytes);
+		Integer index = map.get(bytes);
 
 		// 1. Check if there are any new metrics
-		for (String metricName : metrics.keySet()) {
-			if (!this.metrics.containsKey(metricName)) {
+		for (String metricName : newMetrics.keySet()) {
+			if (!metrics.containsKey(metricName)) {
 				// log.info("New metric {} found", metricName);
 				if (size != 0)
 					throw new RuntimeException("Adding new metrics on fly is not implemented yet");
-				this.addMetric(metricName);
+				addMetric(metricName);
 			}
 		}
 
@@ -156,73 +147,72 @@ public class OffHeapPartition implements Partition {
 			// log.debug("Inserting new combination of dimensions into
 			// partition");
 			index = new Integer(size);
-			this.map.put(bytes, index);
+			map.put(bytes, index);
 			for (int i = 0; i < fields.length; i++) {
-				String fieldName = this.fieldLookup.getKey(i);
+				String fieldName = fieldLookup.getKey(i);
 				// log.debug("Writing {}={} to buffers", fieldName, fields[i]);
-				Column col = this.columns.get(fieldName);
+				Column col = columns.get(fieldName);
 				if (col.isTiny() && col.getNumRecords() > Constants.INITIAL_PARTITION_SIZE) {
 					// log.debug("There are {} records, converting TinyColumn {}
 					// to OffHeap", col.getNumRecords(), fieldName);
 					col = TinyUtils.tinyColumnToOffHeap((TinyColumn) col);
-					this.columns.put(fieldName, col);
+					columns.put(fieldName, col);
 				}
 				col.append(fields[i]);
 			}
-			for (Entry<String, Metric> e : this.metrics.entrySet()) {
+			for (Entry<String, Metric> e : metrics.entrySet()) {
 				Metric m = e.getValue();
 				String metricName = e.getKey();
 				if (m.isTiny() && m.getNumRecords() > Constants.INITIAL_PARTITION_SIZE) {
 					// log.debug("Converting TinyMetric {} to OffHeap",
 					// metricName);
 					m = TinyUtils.tinyMetricToOffHeap((TinyMetric) m);
-					this.metrics.put(metricName, m);
+					metrics.put(metricName, m);
 				}
 				m.append(0l);
 			}
-			this.lastAppendTs = System.currentTimeMillis();
+			lastAppendTs = System.currentTimeMillis();
 			size++;
 		}
 
-		// 3. Increment metrics by one
-		for (Entry<String, Metric> e : this.metrics.entrySet()) {
-			Long c = metrics.get(e.getKey()).longValue();
+		// 3. Increment metrics by values supplied.
+		for (Entry<String, Metric> e : metrics.entrySet()) {
+			Long c = newMetrics.get(e.getKey()).longValue();
 			if (c != null) {
-				e.getValue().incrementBy(index.intValue(), c.longValue());
+				Metric metric = e.getValue();
+				metric.incrementBy(index.intValue(), c.longValue());
 			}
-
 		}
-
 	}
 
 	protected void addNewFields(DataRow row) {
 		Set<String> newFields = new HashSet<String>(row.getFields().keySet());
-		for (String f : this.fieldLookup.getKeys())
+		for (String f : fieldLookup.getKeys())
 			if (row.getFields().containsKey(f))
 				newFields.remove(f);
 
 		if (newFields.size() > 0) {
 			for (String f : newFields) {
-				final int newColumnIndex = this.fieldLookup.getValue(f);
-				this.lookups.put(f, new HashMapLookup());
+				final int newColumnIndex = fieldLookup.getValue(f);
+				lookups.put(f, new HashMapLookup());
 				// log.debug("Index for {} is {}", f, newColumnIndex);
-				this.columns.put(f, new TinyColumn(this.size));
+				columns.put(f, new TinyColumn(size));
 			}
-			this._insert(row);
+			_insert(row);
 		}
 	}
 
 	protected void _insert(DataRow row) {
-		short[] fields = new short[this.fieldLookup.size()];
+		short[] fields = new short[fieldLookup.size()];
 		int i = 0;
 
 		int insertedFieldCount = 0;
-		for (String fieldName : this.fieldLookup.getKeys()) {
+		for (String fieldName : fieldLookup.getKeys()) {
 			String value = row.getFields().get(fieldName);
 			int valueIndex = 0;
 			if (value != null || row.getFields().containsKey(fieldName)) {
 				insertedFieldCount++;
-				valueIndex = this.lookups.get(fieldName).getValue(value != null ? value : Constants.NULL_VALUE);
+				valueIndex = lookups.get(fieldName).getValue(value != null ? value : Constants.NULL_VALUE);
 				// log.debug("Index for value {}.{} is {}", fieldName, value,
 				// valueIndex);
 			}
@@ -234,17 +224,17 @@ public class OffHeapPartition implements Partition {
 		if (insertedFieldCount != row.getFields().size()) {
 			// log.info("Inserted {} fields, but the row has {} fields",
 			// insertedFieldCount, row.getFields().size());
-			this.addNewFields(row);
+			addNewFields(row);
 		} else {
-			this.insertFields(fields, row.getCounters());
+			insertFields(fields, row.getCounters());
 		}
 
 	}
 
 	@Override
 	public synchronized void insert(DataRow row) {
-		this._insert(row);
-		this.lastInsertTs = System.currentTimeMillis();
+		_insert(row);
+		lastInsertTs = System.currentTimeMillis();
 	}
 
 	public void insertData(List<DataRow> data) {
@@ -257,71 +247,55 @@ public class OffHeapPartition implements Partition {
 		log.info("That is {} rows/sec", rowsPerSecond);
 	}
 
-	protected Map<String, IdMatcher> transformFiltersToMatchers(List<Filter> filters)
-			throws ColumnDoesNotExistException {
+	protected Map<String, IdMatcher> transformFiltersToMatchers(List<Filter> filters) {
 		// log.debug("List of filters: {}", filters);
-		Map<String, IdMatcher> out = new HashMap<String, IdMatcher>();
+		Map<String, IdMatcher> fieldNameToMatchers = new HashMap<String, IdMatcher>();
 		Map<String, Set<String>> filtersByColumn = new HashMap<String, Set<String>>();
-		for (String columnName : this.columns.keySet()) {
+		for (String columnName : columns.keySet()) {
 			filtersByColumn.put(columnName, new HashSet<String>());
 		}
-		for (Filter f : filters) {
-			if (!this.columns.containsKey(f.getField())) {
-				// the column we are filtering for does not exist
-				// so, if we are looking for null value, then we are fine.
-				if (f.getValues().length == 1
-						&& (f.getValues()[0].equals(Constants.NULL_VALUE) || f.getValues()[0] == null)) {
-					log.info("There is only one null value");
-					continue;
-				} else {
-					final String msg = String.format("Column %s does not exist in this partition", f.getField());
-					throw new ColumnDoesNotExistException(msg);
-				}
-				// otherwise we will never find anything over here
-
-			}
-			for (String v : f.getValues())
-				filtersByColumn.get(f.getField()).add(v);
+		for (Filter filter : filters) {
+			for (String v : filter.getValues())
+				filtersByColumn.get(filter.getField()).add(v);
 		}
 		for (Entry<String, Set<String>> e : filtersByColumn.entrySet()) {
-			int[] idList = e.getValue().stream().mapToInt((val) -> this.lookups.get(e.getKey()).getValue(val))
-					.toArray();
-			if (idList.length > 0) {
-				// log.debug("Transforming values of {} to {} in {}",
-				// e.getValue(), idList, e.getKey());
-				out.put(e.getKey(), new IdMatcher(idList));
+			String fieldName = e.getKey();
+			Lookup valueIdLookup = lookups.get(fieldName);
+			int[] valueIdList = e.getValue()
+				.stream()
+				.mapToInt(fieldValue -> valueIdLookup.getValue(fieldValue))
+				.toArray();
+			if (valueIdList.length > 0) {
+				fieldNameToMatchers.put(fieldName, new IdMatcher(valueIdList));
 			}
 		}
-		// log.debug("Resulting id matchers: {}", out);
-		return out;
+		// log.debug("Resulting id matchers: {}", fieldNameToMatchers);
+		return fieldNameToMatchers;
 
 	}
 
 	protected long[][][][] initSideCounters() {
-		// log.debug("Metrics look like this: {}",
-		// (Object)this.metricLookup.getKeys());
-		final long[][][][] out = new long[this.fieldLookup.size()][][][];
-		for (int i = 0; i < this.fieldLookup.size(); i++) {
-			String fieldName = this.fieldLookup.getKey(i);
-			Lookup side = this.lookups.get(fieldName);
-			long[][][] sideCounters = new long[side.size()][1][this.metricLookup.size()];
+		final long[][][][] out = new long[fieldLookup.size()][][][];
+		for (int i = 0; i < fieldLookup.size(); i++) {
+			String fieldName = fieldLookup.getKey(i);
+			Lookup side = lookups.get(fieldName);
+			long[][][] sideCounters = new long[side.size()][1][metricLookup.size()];
 			for (int s = 0; s < sideCounters.length; s++)
-				for (int m = 0; m < this.metricLookup.size(); m++)
+				for (int m = 0; m < metricLookup.size(); m++)
 					sideCounters[s][FAKE_GROUP_VALUE_ID][m] = 0l;
 			out[i] = sideCounters;
 		}
-		// log.debug("Initial counters look like this {}", (Object)out);
 		return out;
 	}
 
 	protected long[][][][] initGroupedSideCounters(final String groupFieldName) {
-		final long[][][][] out = new long[this.fieldLookup.size()][][][];
-		final Lookup groupSide = this.lookups.get(groupFieldName);
-		final int metricLookupSize = this.metricLookup.size();
-		final int lookupSize = this.fieldLookup.size();
+		final long[][][][] out = new long[fieldLookup.size()][][][];
+		final Lookup groupSide = lookups.get(groupFieldName);
+		final int metricLookupSize = metricLookup.size();
+		final int lookupSize = fieldLookup.size();
 		for (int f = 0; f < lookupSize; f++) {
-			String fieldName = this.fieldLookup.getKey(f);
-			Lookup side = this.lookups.get(fieldName);
+			String fieldName = fieldLookup.getKey(f);
+			Lookup side = lookups.get(fieldName);
 			long[][][] sideCounters = new long[side.size()][groupSide.size()][metricLookupSize];
 			for (int s = 0; s < sideCounters.length; s++)
 				for (int g = 0; g < groupSide.size(); g++)
@@ -333,11 +307,13 @@ public class OffHeapPartition implements Partition {
 	}
 
 	protected Column[] getColumnsAsArray() {
-		final Column[] columns = new Column[this.columns.size()];
-		for (Entry<String, Column> e : this.columns.entrySet()) {
-			columns[this.fieldLookup.getValue(e.getKey())] = e.getValue();
+		final Column[] columnsArray = new Column[columns.size()];
+		for (Entry<String, Column> e : columns.entrySet()) {
+			String fieldName = e.getKey();
+			int fieldId = fieldLookup.getValue(fieldName);
+			columnsArray[fieldId] = e.getValue();
 		}
-		return columns;
+		return columnsArray;
 	}
 
 	@Override
@@ -346,14 +322,25 @@ public class OffHeapPartition implements Partition {
 		long t0 = System.nanoTime(); // debug purposes
 		int curSize = size; // current max index of rows in the db
 
-
-		// creating an empty result set, with id's
-		final String[] metricNames = this.metricLookup.getKeys();
-		final long[] totalCounters = new long[metricNames.length];
-
+		/*
+		 * If filters require non-existing columns we can skip the search altogether.
+		 */
+		if (!checkAllFilterColumnsExist(filters)) {
+			return SearchResult.buildEmpty(metrics.keySet());
+		}
 
 		// a field to use for result grouping
 		final boolean doFieldGrouping = groupFieldName != null;
+
+		/*
+		 * If the grouping field does not exist in the partition - just return
+		 * en empty result.
+		 */
+		if (doFieldGrouping && !fieldLookup.containsValue(groupFieldName)) {
+			log.warn(String.format("Grouping column %s does not exist in this partition", groupFieldName));
+			return SearchResult.buildEmpty(metrics.keySet());
+		}
+
 		final int groupFieldId;
 		// field names -> (column value id -> (group value id -> (metric name -> counter)))
 		final long[][][][] sideCounters;
@@ -361,22 +348,18 @@ public class OffHeapPartition implements Partition {
 		/*
 		 * When field grouping is *not required* we basically just use a
 		 * single-value array with a zero id for the groupValueId array.
-		 *
-		 * If the grouping field does not exist in the partition - just return
-		 * en empty result.
-		 *
-		 * TODO: moving the check higher? To the Cube?
 		 */
-		if (doFieldGrouping && fieldLookup.containsValue(groupFieldName)) {
+		if (doFieldGrouping) {
 			groupFieldId = fieldLookup.getValue(groupFieldName);
 			sideCounters = initGroupedSideCounters(groupFieldName);
-		} else if (doFieldGrouping && !fieldLookup.containsValue(groupFieldName)) {
-			log.warn(String.format("Grouping column %s does not exist in this partition", groupFieldName));
-			return SearchResult.buildEmpty(metrics.keySet());
 		} else {
 			groupFieldId = FAKE_GROUP_VALUE_ID;
 			sideCounters = initSideCounters();
 		}
+
+		// creating an empty result set, with id's
+		final String[] metricNames = metricLookup.getKeys();
+		final long[] totalCounters = new long[metricNames.length];
 
 		final Column[] columns = getColumnsAsArray();
 
@@ -393,7 +376,7 @@ public class OffHeapPartition implements Partition {
 		/*
 		 * bitmask for filter matches
 		 */
-		final boolean[] columnMatches = new boolean[this.fieldLookup.size()];
+		final boolean[] columnMatches = new boolean[fieldLookup.size()];
 
 		/*
 		 * values of measures
@@ -403,116 +386,111 @@ public class OffHeapPartition implements Partition {
 		/*
 		 * values of columns. Id's only, no real string values.
 		 */
-		final int columnValues[] = new int[this.fieldLookup.size()];
+		final int columnValues[] = new int[fieldLookup.size()];
 
 		/*
 		 * Fast representation of filters. IdMatcher means we are doing only
 		 * equality checking, no fancy >, <, !=, etc.
 		 */
-		final IdMatcher[] matchersArray = new IdMatcher[this.fieldLookup.size()];
-		final Metric[] metricsArray = new Metric[this.metricLookup.size()];
-		try {
+		final IdMatcher[] matchersArray = new IdMatcher[fieldLookup.size()];
+		final Metric[] metricsArray = new Metric[metricLookup.size()];
 
-			/*
-			 * Filters are specification of criterias using strings. Here they
-			 * are transformed to an efficient representation, functions that
-			 * match using integer ids
-			 */
-			final Map<String, IdMatcher> matchers = transformFiltersToMatchers(filters);
+		/*
+		 * Filters are specification of criterias using strings. Here they
+		 * are transformed to an efficient representation, functions that
+		 * match using integer ids
+		 */
+		final Map<String, IdMatcher> matchers = transformFiltersToMatchers(filters);
 
-			for (Entry<String, IdMatcher> e : matchers.entrySet()) {
-				int fieldId = this.fieldLookup.getValue(e.getKey());
-				matchersArray[fieldId] = e.getValue();
-			}
-
-			/*
-			 * Here we get transform Map of metrics to an array of metrics. Note
-			 * that in 99% of cases there is only one metric
-			 */
-			for (Entry<String, Metric> e : metrics.entrySet()) {
-				int fieldId = this.metricLookup.getValue(e.getKey());
-				metricsArray[fieldId] = e.getValue();
-			}
-
-			/*
-			 * Here starts the brute-force scanning. Operations in this block
-			 * have to be as fast as possible
-			 */
-
-			final int fieldLookupSize = this.fieldLookup.size();
-			t2 = System.nanoTime();
-			for (int i = 0; i < curSize; i++) {
-				/*
-				 * Here we do not retrieve values of all columns. We only get
-				 * those which are related to a filter/matcher
-				 */
-				for (int matcherId = 0; matcherId < matchersArray.length; matcherId++) {
-					IdMatcher matcher = matchersArray[matcherId];
-					columnMatches[matcherId] = true;
-					final int valueId = columns[matcherId].get(i);
-					columnValues[matcherId] = valueId;
-					if (matcher != null) {
-						columnMatches[matcherId] = matcher.match(valueId);
-					}
-				}
-
-				/*
-				 * At least one of the filters was matched. We need this row
-				 */
-				if (atLeastOneMatch(columnMatches)) {
-					matchCount++;
-					/*
-					 * We have a match! First, we retrieve the counters values
-					 * for this row
-					 */
-					for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-						final long c = metricsArray[mIndex].get(i);
-						metricValues[mIndex] = c;
-					}
-
-					/*
-					 * Then, check if all columns of a row match. Increase the
-					 * totalCounters if positive.
-					 */
-					if (checkAllMatch(columnMatches)) {
-						for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-							totalCounters[mIndex] += metricValues[mIndex];
-						}
-					}
-
-					/*
-					 * Find out the value of the field to group by for the i-th row.
-					 */
-					final int groupFieldValueId = doFieldGrouping ? columns[groupFieldId].get(i): FAKE_GROUP_VALUE_ID;
-
-					/*
-					 * Last, retrieve the values of all columns. For each side,
-					 * we increment the side counter, but only when *other* side
-					 * filters match.
-					 */
-					for (int fieldId = 0; fieldId < fieldLookupSize; fieldId++) {
-						/*
-						 * We don't care if the current side filter is applied
-						 * or not - it should only influence *other* side
-						 * filtering.
-						 */
-						if (!checkOtherMatch(columnMatches, fieldId)) {
-							continue;
-						}
-
-						final int columnValueId = columnValues[fieldId];
-						for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-							sideCounters[fieldId][columnValueId][groupFieldValueId][mIndex] += metricValues[mIndex];
-						}
-					}
-				}
-			}
-			t3 = System.nanoTime();
-
-		} catch (ColumnDoesNotExistException e) {
-			log.warn(e.getMessage());
-			return SearchResult.buildEmpty(metrics.keySet());
+		for (Entry<String, IdMatcher> e : matchers.entrySet()) {
+			int fieldId = fieldLookup.getValue(e.getKey());
+			matchersArray[fieldId] = e.getValue();
 		}
+
+		/*
+		 * Here we get transform Map of metrics to an array of metrics. Note
+		 * that in 99% of cases there is only one metric
+		 */
+		for (Entry<String, Metric> e : metrics.entrySet()) {
+			int fieldId = metricLookup.getValue(e.getKey());
+			metricsArray[fieldId] = e.getValue();
+		}
+
+		/*
+		 * Here starts the brute-force scanning. Operations in this block
+		 * have to be as fast as possible
+		 */
+
+		final int fieldLookupSize = fieldLookup.size();
+		t2 = System.nanoTime();
+		for (int i = 0; i < curSize; i++) {
+			/*
+			 * Here we do not retrieve values of all columns. We only get
+			 * those which are related to a filter/matcher
+			 */
+			for (int matcherId = 0; matcherId < matchersArray.length; matcherId++) {
+				IdMatcher matcher = matchersArray[matcherId];
+				columnMatches[matcherId] = true;
+				final int valueId = columns[matcherId].get(i);
+				columnValues[matcherId] = valueId;
+				if (matcher != null) {
+					columnMatches[matcherId] = matcher.match(valueId);
+				}
+			}
+
+			/*
+			 * At least one of the filters was matched. We need this row
+			 */
+			if (atLeastOneMatch(columnMatches)) {
+				matchCount++;
+				/*
+				 * We have a match! First, we retrieve the counters values
+				 * for this row
+				 */
+				for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
+					final long c = metricsArray[mIndex].get(i);
+					metricValues[mIndex] = c;
+				}
+
+				/*
+				 * Then, check if all columns of a row match. Increase the
+				 * totalCounters if positive.
+				 */
+				if (checkAllMatch(columnMatches)) {
+					for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
+						totalCounters[mIndex] += metricValues[mIndex];
+					}
+				}
+
+				/*
+				 * Find out the value of the field to group by for the i-th row.
+				 */
+				final int groupFieldValueId = doFieldGrouping ? columns[groupFieldId].get(i): FAKE_GROUP_VALUE_ID;
+
+				/*
+				 * Last, retrieve the values of all columns. For each side,
+				 * we increment the side counter, but only when *other* side
+				 * filters match.
+				 */
+				for (int fieldId = 0; fieldId < fieldLookupSize; fieldId++) {
+					/*
+					 * We don't care if the current side filter is applied
+					 * or not - it should only influence *other* side
+					 * filtering.
+					 */
+					if (!checkOtherMatch(columnMatches, fieldId)) {
+						continue;
+					}
+
+					final int columnValueId = columnValues[fieldId];
+					for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
+						sideCounters[fieldId][columnValueId][groupFieldValueId][mIndex] += metricValues[mIndex];
+					}
+				}
+			}
+		}
+		t3 = System.nanoTime();
+
 		final long t_pre_build = System.nanoTime();
 		final SearchResult result = SearchResult.buildFromResultArray(
 			  sideCounters, totalCounters,
@@ -530,6 +508,20 @@ public class OffHeapPartition implements Partition {
 		}
 		return result;
 
+	}
+
+	private boolean checkAllFilterColumnsExist(List<Filter> filters) {
+		for (Filter filter : filters) {
+			String fieldName = filter.getField();
+			if (columns.containsKey(fieldName)) {
+				continue;
+			}
+			if (filter.isNullValueFilter()) {
+				continue;
+			}
+			return false;
+		}
+		return true;
 	}
 
 	private boolean checkAllMatch(boolean[] matches) {
@@ -568,81 +560,80 @@ public class OffHeapPartition implements Partition {
 
 	@Override
 	public Map<String, Object> getStats() {
-		long columnSize = this.columns.values().stream().mapToLong(Column::size).sum();
-		long metricSize = this.metrics.values().stream().mapToLong(Metric::size).sum();
-		int columnBlocks = this.columns.values().stream().mapToInt(Column::getNumBuffers).sum();
-		int metricBLocks = this.metrics.values().stream().mapToInt(Metric::getNumBuffers).sum();
-		long lookupSize = (long) (this.map!=null?this.map.size():0l) * this.columns.size() * Short.BYTES;
+		long columnSize = columns.values().stream().mapToLong(Column::size).sum();
+		long metricSize = metrics.values().stream().mapToLong(Metric::size).sum();
+		int columnBlocks = columns.values().stream().mapToInt(Column::getNumBuffers).sum();
+		int metricBLocks = metrics.values().stream().mapToInt(Metric::getNumBuffers).sum();
+		long lookupSize = (long) (map!=null?map.size():0l) * columns.size() * Short.BYTES;
 		Map<String, Object> stats = new HashMap<String, Object>();
 		stats.put(Constants.STATS_COLUMN_SIZE, columnSize);
 		stats.put(Constants.STATS_METRIC_SIZE, metricSize);
 		stats.put(Constants.STATS_COLUMN_BLOCKS, columnBlocks);
 		stats.put(Constants.STATS_METRIC_BLOCKS, metricBLocks);
 		stats.put(Constants.STATS_LOOKUP_SIZE, lookupSize);
-		stats.put(Constants.STATS_LAST_INSERT, this.lastInsertTs);
-		stats.put(Constants.STATS_LAST_RECORD_APPEND, this.lastAppendTs);
-		stats.put(Constants.STATS_NUM_RECORDS, this.size);
-		stats.put(Constants.STATS_NUM_COLUMNS, this.columns.size());
+		stats.put(Constants.STATS_LAST_INSERT, lastInsertTs);
+		stats.put(Constants.STATS_LAST_RECORD_APPEND, lastAppendTs);
+		stats.put(Constants.STATS_NUM_RECORDS, size);
+		stats.put(Constants.STATS_NUM_COLUMNS, columns.size());
 		stats.put(Constants.STATS_NUM_LARGE_BLOCKS,
-				this.metrics.values().stream().mapToInt(e -> e.isTiny() ? 0 : 1).sum()
-						+ this.columns.values().stream().mapToInt(e -> e.isTiny() ? 0 : 1).sum());
-		stats.put(Constants.STATS_IS_READONLY_PARTITION, this.map == null);
-		// stats.put(Constants.STATS_LAST_SAVE, this.lastInsertTs);
-		this.lookups.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().size()));
+				metrics.values().stream().mapToInt(e -> e.isTiny() ? 0 : 1).sum()
+						+ columns.values().stream().mapToInt(e -> e.isTiny() ? 0 : 1).sum());
+		stats.put(Constants.STATS_IS_READONLY_PARTITION, map == null);
+		// stats.put(Constants.STATS_LAST_SAVE, lastInsertTs);
+		lookups.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().size()));
 		return stats;
 	}
 
 	@Override
 	public void write(Kryo kryo, Output output) {
-		output.writeInt(this.size);
+		output.writeInt(size);
 		// add fieldlookup
-		kryo.writeClassAndObject(output, this.fieldLookup);
+		kryo.writeClassAndObject(output, fieldLookup);
 		// add dimension lookups
-		kryo.writeClassAndObject(output, this.lookups);
+		kryo.writeClassAndObject(output, lookups);
 		// add metriclookup
-		kryo.writeClassAndObject(output, this.metricLookup);
+		kryo.writeClassAndObject(output, metricLookup);
 		// add columns
-		kryo.writeClassAndObject(output, this.columns);
+		kryo.writeClassAndObject(output, columns);
 		// add metrics
-		kryo.writeClassAndObject(output, this.metrics);
-		this.lastSaveTs = System.currentTimeMillis();
+		kryo.writeClassAndObject(output, metrics);
+		lastSaveTs = System.currentTimeMillis();
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public void read(Kryo kryo, Input input) {
-		this.size = input.readInt();
-		this.fieldLookup = (Lookup) kryo.readClassAndObject(input);
-		this.lookups = (Map<String, Lookup>) kryo.readClassAndObject(input);
-		this.metricLookup = (Lookup) kryo.readClassAndObject(input);
-		this.columns = (Map<String, Column>) kryo.readClassAndObject(input);
-		this.metrics = (Map<String, Metric>) kryo.readClassAndObject(input);
-		this.initializeMap();
+		size = input.readInt();
+		fieldLookup = (Lookup) kryo.readClassAndObject(input);
+		lookups = (Map<String, Lookup>) kryo.readClassAndObject(input);
+		metricLookup = (Lookup) kryo.readClassAndObject(input);
+		columns = (Map<String, Column>) kryo.readClassAndObject(input);
+		metrics = (Map<String, Metric>) kryo.readClassAndObject(input);
+		initializeMap();
 	}
 
 	protected Map<String, String> bytesToMap(byte[] in) {
 		Map<String, String> out = new HashMap<String, String>();
 		ByteBuffer b = ByteBuffer.wrap(in);
-		for (int i = 0; i < this.fieldLookup.size(); i++) {
-			String fieldName = this.fieldLookup.getKey(i);
+		for (int i = 0; i < fieldLookup.size(); i++) {
+			String fieldName = fieldLookup.getKey(i);
 			String fieldValue;
 			if (b.remaining() > 0) {
 				int fieldId = b.getShort();
-				fieldValue = this.lookups.get(fieldName).getKey(fieldId);
+				fieldValue = lookups.get(fieldName).getKey(fieldId);
 				fieldValue = fieldValue.equals("null") ? null : fieldValue;
 			} else
 				fieldValue = null;
 			out.put(fieldName, fieldValue);
-
 		}
 		return out;
 	}
 
 	protected Map<String, Long> metricsToMap(int offset) {
 		Map<String, Long> out = new HashMap<String, Long>();
-		for (int i = 0; i < this.metricLookup.size(); i++) {
-			String metricName = this.metricLookup.getKey(i);
-			Long metricValue = this.metrics.get(metricName).get(offset);
+		for (int i = 0; i < metricLookup.size(); i++) {
+			String metricName = metricLookup.getKey(i);
+			Long metricValue = metrics.get(metricName).get(offset);
 			out.put(metricName, metricValue);
 		}
 		return out;
@@ -650,16 +641,14 @@ public class OffHeapPartition implements Partition {
 
 	@Override
 	public Stream<DataRow> asDataRowStream() {
-		if(this.map==null)
-			this.initializeMap();
-		return this.map.entrySet().map(e -> {
+		if(map==null)
+			initializeMap();
+		return map.entrySet().map(e -> {
 			DataRow r = new DataRow();
-			r.setFields(this.bytesToMap(e.getKey()));
+			r.setFields(bytesToMap(e.getKey()));
 			int offset = e.getValue();
 			r.setCounters(metricsToMap(offset));
 			return r;
 		});
-
 	}
-
 }

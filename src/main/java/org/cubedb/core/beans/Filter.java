@@ -1,6 +1,7 @@
 package org.cubedb.core.beans;
 
 import java.util.Arrays;
+import org.cubedb.core.Constants;
 
 public class Filter {
 
@@ -22,6 +23,13 @@ public class Filter {
 
 	public void setValues(String[] values) {
 		this.values = values;
+	}
+
+	public boolean isNullValueFilter() {
+		String[] values = getValues();
+		return values.length == 1 &&
+			(values[0].equals(Constants.NULL_VALUE) ||
+			 values[0] == null);
 	}
 
 	@Override
