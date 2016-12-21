@@ -129,24 +129,27 @@ public class CubeImpl implements Cube {
 		Map<GroupedSearchResultRow, MutableLong> out = new HashMap<GroupedSearchResultRow, MutableLong>(1000, 0.5f);
 		for (Pair<String, Partition> e : partitions) {
 			String partitionValue = e.getKey();
-			boolean partitionMatch = partitionValue.compareTo(fromPartition) >= 0
-					&& partitionValue.compareTo(toPartition) <= 0;
+			Partition partition = e.getValue();
+			SearchResult searchResult = partition.get(filters, groupBy);
 
-			SearchResult searchResult = e.getValue().get(filters, groupBy);
-			if (partitionMatch) {
-				for (final Entry<GroupedSearchResultRow, Long> sr : searchResult.getResults().entrySet()) {
-					MutableLong c = out.computeIfAbsent(sr.getKey(), k -> new MutableLong()).increment(sr.getValue());
-					/*MutableLong c = out.get(sr.getKey());
-					if (c == null) {
-						c = new MutableLong();
-						out.put(sr.getKey(), c);
-					}
-					c.increment(sr.getValue());*/
+			boolean isPartitionMatch = partitionValue.compareTo(fromPartition) >= 0
+				&& partitionValue.compareTo(toPartition) <= 0;
+			if (isPartitionMatch) {
+				for (final Entry<GroupedSearchResultRow, Long> sr: searchResult.getResults().entrySet()) {
+					GroupedSearchResultRow row = sr.getKey();
+					Long rowValue = sr.getValue();
+					out.computeIfAbsent(row, k -> new MutableLong()).increment(rowValue);
 				}
 			}
-			for (Entry<String, Long> tc : searchResult.getTotalCounts().entrySet()) {
-				GroupedSearchResultRow r = new GroupedSearchResultRow(SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_FIELD_VALUE,  partitionColumn, partitionValue, tc.getKey());
-				out.put(r, new MutableLong(tc.getValue()));
+
+			for (Entry<String, Long> tc: searchResult.getTotalCounts().entrySet()) {
+				String metricName = tc.getKey();
+				Long metricValue = tc.getValue();
+				GroupedSearchResultRow row = new GroupedSearchResultRow(
+					SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_FIELD_VALUE,
+					partitionColumn, partitionValue, metricName
+				);
+				out.put(row, new MutableLong(metricValue));
 			}
 		}
 		return out;
@@ -216,7 +219,7 @@ public class CubeImpl implements Cube {
 		}
 		long t_pre_reduce = System.currentTimeMillis();
 		log.debug("Search pre-reduce took {}ms", t_pre_reduce - t0);
-		
+
 		Map<GroupedSearchResultRow, MutableLong> result = new HashMap<GroupedSearchResultRow, MutableLong>();
 		for (int i = 0; i < searchers.length; i++) {
 			for (Entry<GroupedSearchResultRow, MutableLong> e : searchers[i].getResult().entrySet())

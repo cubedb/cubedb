@@ -348,8 +348,6 @@ public class OffHeapPartition implements Partition {
 		/*
 		 * When field grouping is *not required* we basically just use a
 		 * single-value array with a zero id for the groupValueId array.
-		 *
-		 * TODO: moving the check higher? To the Cube?
 		 */
 		if (doFieldGrouping) {
 			groupFieldId = fieldLookup.getValue(groupFieldName);
