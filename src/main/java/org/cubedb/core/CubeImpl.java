@@ -246,13 +246,16 @@ public class CubeImpl implements Cube {
 
 	@Override
 	public Map<GroupedSearchResultRow, Long> get(int lastRange, List<Filter> filters, String groupBy) {
-		List<String> partitions = this.partitions.keySet().stream().sorted((e, ot) -> ot.compareTo(e)).limit(lastRange)
-				.collect(Collectors.toList());
-		if (partitions.size() == 0) {
+		List<String> partitionKeys = partitions.keySet()
+			.stream()
+			.sorted((e, ot) -> ot.compareTo(e))
+			.limit(lastRange)
+			.collect(Collectors.toList());
+		if (partitionKeys.size() == 0) {
 			return new HashMap<GroupedSearchResultRow, Long>();
 		}
-		final String toPartition = partitions.get(0);
-		final String fromPartition = partitions.get(partitions.size() - 1);
+		final String toPartition = partitionKeys.get(0);
+		final String fromPartition = partitionKeys.get(partitionKeys.size() - 1);
 
 		return get(fromPartition, toPartition, filters, groupBy);
 	}
