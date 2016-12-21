@@ -49,7 +49,7 @@ public class CubeImpl implements Cube {
 	public CubeImpl(String partitionColumn) {
 		partitions = new ConcurrentHashMap<String, Partition>();
 		this.partitionColumn = partitionColumn;
-		this.recordsCount = new AtomicInteger(0);
+		recordsCount = new AtomicInteger(0);
 	}
 
 	private Partition createNewPartition(String partitionName) {
@@ -58,9 +58,9 @@ public class CubeImpl implements Cube {
 		return p;
 	}
 
-	protected void insert(Collection<String> partitions, Map<String, List<DataRow>> groupedData) {
-		for (String p : partitions) {
-			Partition partition = this.partitions.computeIfAbsent(p, this::createNewPartition);
+	protected void insert(Collection<String> newPartitions, Map<String, List<DataRow>> groupedData) {
+		for (String p : newPartitions) {
+			Partition partition = partitions.computeIfAbsent(p, this::createNewPartition);
 			for (DataRow d : groupedData.get(p)) {
 				partition.insert(d);
 				recordsCount.incrementAndGet();
@@ -71,8 +71,9 @@ public class CubeImpl implements Cube {
 	@Override
 	public int optimize()
 	{
-		return this.partitions.values().stream().mapToInt( p -> p.optimize()?1:0).sum();
+		return partitions.values().stream().mapToInt( p -> p.optimize()?1:0).sum();
 	}
+
 	protected class Insertor implements Runnable {
 		final private List<String> partitions;
 		final private Map<String, List<DataRow>> groupedData;
