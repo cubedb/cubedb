@@ -32,8 +32,8 @@ public class SearchResult {
 		return r;
 	}
 
-	
-	//TODO: re-implement with using a list instead of hashmap. 
+
+	//TODO: re-implement with using a list instead of hashmap.
 	public static SearchResult buildFromResultArray(long[][][][] sideCounters,
 													long[] totalCounters,
 													boolean isGroupLookup,
@@ -46,23 +46,24 @@ public class SearchResult {
 		if (!isGroupLookup) {
 			groupFieldName = FAKE_GROUP_FIELD_NAME;
 		}
-		for (int i = 0; i < sideCounters.length; i++) {
-			String sideName = fieldLookup.getKey(i);
+		for (int sn = 0; sn < sideCounters.length; sn++) {
+			String sideName = fieldLookup.getKey(sn);
 			final Lookup sideLookup = lookups.get(sideName);
-			for (int j = 0; j < sideCounters[i].length; j++) {
-				String sideValue = sideLookup.getKey(j);
-				for (int g = 0; g < sideCounters[i][j].length; g++) {
+			for (int sv = 0; sv < sideCounters[sn].length; sv++) {
+				String sideValue = sideLookup.getKey(sv);
+				for (int g = 0; g < sideCounters[sn][sv].length; g++) {
 					String groupFieldValue = isGroupLookup ? groupFieldLookup.getKey(g) : FAKE_GROUP_FIELD_VALUE;
-					for (int m = 0; m < sideCounters[i][j][g].length; m++) {
+					for (int m = 0; m < sideCounters[sn][sv][g].length; m++) {
 						String metricName = metricLookup.getKey(m);
-						if(sideCounters[i][j][g][m]!=0){
+						if(sideCounters[sn][sv][g][m]!=0){
 							GroupedSearchResultRow r = new GroupedSearchResultRow(
-									groupFieldName, 
+									groupFieldName,
 									groupFieldValue,
 									sideName,
 									sideValue,
-									metricName);
-							groupedResult.put(r, sideCounters[i][j][g][m]);
+									metricName
+							);
+							groupedResult.put(r, sideCounters[sn][sv][g][m]);
 						}
 					}
 				}
