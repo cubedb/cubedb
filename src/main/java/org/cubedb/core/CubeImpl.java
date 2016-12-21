@@ -127,6 +127,9 @@ public class CubeImpl implements Cube {
 
 	protected Map<GroupedSearchResultRow, MutableLong> get(List<Pair<String, Partition>> partitions, List<Filter> filters,
 			String fromPartition, String toPartition, String groupBy) {
+		boolean isGroupLookup = groupBy != null;
+		String groupFieldName = isGroupLookup ? groupBy : SearchResult.FAKE_GROUP_FIELD_NAME;
+
 		Map<GroupedSearchResultRow, MutableLong> out = new HashMap<GroupedSearchResultRow, MutableLong>(1000, 0.5f);
 		for (Pair<String, Partition> e : partitions) {
 			String partitionValue = e.getKey();
@@ -143,14 +146,18 @@ public class CubeImpl implements Cube {
 				}
 			}
 
-			for (Entry<String, Long> tc: searchResult.getTotalCounts().entrySet()) {
+			for (Entry<String, Map<String, Long>> tc: searchResult.getTotalCounts().entrySet()) {
 				String metricName = tc.getKey();
-				Long metricValue = tc.getValue();
-				GroupedSearchResultRow row = new GroupedSearchResultRow(
-					SearchResult.FAKE_GROUP_FIELD_NAME, SearchResult.FAKE_GROUP_FIELD_VALUE,
-					partitionColumn, partitionValue, metricName
-				);
-				out.put(row, new MutableLong(metricValue));
+				Map<String, Long> groupFieldValueToCount = tc.getValue();
+				for (Entry<String, Long> gc: groupFieldValueToCount.entrySet()) {
+					Long metricValue = gc.getValue();
+					String groupFieldValue = gc.getKey();
+					GroupedSearchResultRow row = new GroupedSearchResultRow(
+						groupFieldName, groupFieldValue,
+						partitionColumn, partitionValue, metricName
+					);
+					out.put(row, new MutableLong(metricValue));
+				}
 			}
 		}
 		return out;
@@ -206,31 +213,44 @@ public class CubeImpl implements Cube {
 		 //log.info("Partitions are distributed in this way: {}",
 		 //partitionSlices.stream().map( s -> s.stream().map(p ->
 		 //p.getT()).collect(Collectors.toList()).toString()).collect(Collectors.toList()));
+
 		Searcher[] searchers = new Searcher[partitionSlices.size()];
 		Thread[] threads = new Thread[partitionSlices.size()];
 		for (int i = 0; i < searchers.length; i++) {
-			searchers[i] = new Searcher(partitionSlices.get(i), realFilters, fromPartitionFilter, toPartitionFilter, groupBy);
+			searchers[i] = new Searcher(
+				partitionSlices.get(i), realFilters, fromPartitionFilter, toPartitionFilter, groupBy
+			);
 			threads[i] = new Thread(searchers[i]);
 			threads[i].start();
 		}
-		try {
-			for (int i = 0; i < searchers.length; i++)
-				threads[i].join();
 
-		} catch (InterruptedException e1) {
-			e1.printStackTrace();
+		try {
+			for (Thread thread: threads) {
+				thread.join();
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
-		long t_pre_reduce = System.currentTimeMillis();
-		log.debug("Search pre-reduce took {}ms", t_pre_reduce - t0);
+
+		long tPreReduce = System.currentTimeMillis();
+		log.debug("Search pre-reduce took {}ms", tPreReduce - t0);
 
 		Map<GroupedSearchResultRow, MutableLong> result = new HashMap<GroupedSearchResultRow, MutableLong>();
-		for (int i = 0; i < searchers.length; i++) {
-			for (Entry<GroupedSearchResultRow, MutableLong> e : searchers[i].getResult().entrySet())
-				result.computeIfAbsent(e.getKey(), row -> new MutableLong()).increment(e.getValue().get());
+		for (Searcher searcher: searchers) {
+			for (Entry<GroupedSearchResultRow, MutableLong> e: searcher.getResult().entrySet()) {
+				GroupedSearchResultRow row = e.getKey();
+				MutableLong c = result.computeIfAbsent(row, newRow -> new MutableLong());
+				MutableLong rowValue = e.getValue();
+				c.increment(rowValue.get());
+			}
 		}
+
 		long t1 = System.currentTimeMillis();
-		log.debug("Reduce took {}ms", t1 - t_pre_reduce);
-		return result.entrySet().stream().collect(Collectors.toMap(Entry::getKey, e -> e.getValue().get()));
+		log.debug("Reduce took {}ms", t1 - tPreReduce);
+
+		return result.entrySet()
+			.stream()
+			.collect(Collectors.toMap(Entry::getKey, e -> e.getValue().get()));
 	}
 
 	@Override
