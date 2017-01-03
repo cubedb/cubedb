@@ -53,7 +53,6 @@ public class CubeImpl implements Cube {
 	}
 
 	private Partition createNewPartition(String partitionName) {
-		//Partition p = new CachedCountersOffHeapPartition();
 		Partition p = new OffHeapPartition();
 		return p;
 	}
