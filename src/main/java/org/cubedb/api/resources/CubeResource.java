@@ -1,5 +1,7 @@
 package org.cubedb.api.resources;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -100,6 +102,7 @@ public class CubeResource {
 	public APIResponse<Map<String, Integer>> insert(List<DataRow> rows, @Context UriInfo info) {
 		long startTs = System.currentTimeMillis();
 		cube.insert(rows);
+		log.info("Inserted {} rows", rows.size());
 		return new APIResponse<Map<String, Integer>>(ImmutableMap.of("numInsertedRows", rows.size()), info, startTs);
 	}
 
@@ -175,7 +178,7 @@ public class CubeResource {
 
 	@POST
 	@Path("/save")
-	public APIResponse<Map<String, String>> save(@Context UriInfo info) {
+	public APIResponse<Map<String, String>> save(@Context UriInfo info) throws FileNotFoundException, IOException {
 		long startTs = System.currentTimeMillis();
 		log.info("Saving to {}", cube.getPath());
 		cube.save(cube.getPath());
@@ -185,7 +188,7 @@ public class CubeResource {
 
 	@POST
 	@Path("/saveJSON")
-	public APIResponse<Map<String, String>> dump(@Context UriInfo info) {
+	public APIResponse<Map<String, String>> dump(@Context UriInfo info) throws IOException {
 		long startTs = System.currentTimeMillis();
 		String path = cube.getPath() + "/json";
 		log.info("Saving to {}", path);

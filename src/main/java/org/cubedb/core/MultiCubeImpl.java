@@ -5,7 +5,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.security.InvalidParameterException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,7 +14,6 @@ import java.util.stream.Collectors;
 
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
-import org.cubedb.core.beans.Pair;
 import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,23 +86,18 @@ public class MultiCubeImpl implements MultiCube {
 		}
 	}
 
-
 	@Override
-	public void save(String path) {
+	public void save(String path) throws IOException {
 		this.save(path, false);
 	}
 
-	public void save(String path, boolean asJson) {
-		if (this.isCurrentlySavingOrLoading) {
-			log.warn("Process of saving or loading is currently in progress.");
-			return;
-		}
-		this.isCurrentlySavingOrLoading = true;
+	public synchronized void save(String path, boolean asJson) throws IOException {
 		File p = new File(path);
 		if (p.exists() && p.isFile()) {
 			log.error("Attempting to save to directory");
-			throw new InvalidParameterException("Path specifid is a file");
-		} else {
+			throw new InvalidParameterException("Path specified is a file");
+		}
+		if (!p.exists()) {
 			p.mkdirs();
 		}
 		File destination;
@@ -114,7 +107,7 @@ public class MultiCubeImpl implements MultiCube {
 			for (Entry<String, Cube> e : this.cubes.entrySet()) {
 				String saveFileName = destination.getAbsolutePath() + "/" + e.getKey() + ".gz";
 				try {
-					if(!asJson)
+					if (!asJson)
 						e.getValue().save(saveFileName);
 					else
 						e.getValue().saveAsJson(saveFileName, e.getKey());
@@ -133,14 +126,15 @@ public class MultiCubeImpl implements MultiCube {
 			destination.delete();
 		} catch (IOException e2) {
 			// TODO Auto-generated catch block
-			e2.printStackTrace();
+			log.error("Exception when saving the cube", e2);
 		}
+		// Close the file
 		lastSaveTsMs = System.currentTimeMillis();
 		this.isCurrentlySavingOrLoading = false;
 	}
 
 	@Override
-	public void load(String path) {
+	public synchronized void load(String path) {
 		long t0 = System.currentTimeMillis();
 
 		if (this.isCurrentlySavingOrLoading) {
@@ -176,27 +170,19 @@ public class MultiCubeImpl implements MultiCube {
 		log.info("Loading time: {}ms", t1 - t0);
 	}
 
-
-	public void loadParallel(File p) {
-		this.cubes =
-		Arrays.stream(p.listFiles())
-		.parallel()
-		.map( cubeFile -> {
-			log.info("Loading from file {}", cubeFile.getAbsolutePath());
-				String cubeName = cubeFile.getName().replace(".gz", "");
-				Cube c = createNewCube(partitionColumnName);
-				try {
-					c.load(cubeFile.getAbsolutePath());
-				} catch (IOException e) {
-					cubeName = null;
-					log.error("Could no load cube {}", cubeName);
-				}
-				return new Pair<String, Cube>(cubeName, c);
-			})
-		.filter(e -> e.getKey()!=null)
-		.collect(Collectors.toMap(Pair::getKey, Pair::getValue));
-
-	}
+	/*
+	 * public void loadParallel(File p) { this.cubes =
+	 * Arrays.stream(p.listFiles()).parallel().map(cubeFile -> { log.info(
+	 * "Loading from file {}", cubeFile.getAbsolutePath()); String cubeName =
+	 * cubeFile.getName().replace(".gz", ""); Cube c =
+	 * createNewCube(partitionColumnName); try {
+	 * c.load(cubeFile.getAbsolutePath()); } catch (IOException e) { cubeName =
+	 * null; log.error("Could no load cube {}", cubeName); } return new
+	 * Pair<String, Cube>(cubeName, c); }).filter(e -> e.getKey() !=
+	 * null).collect(Collectors.toMap(Pair::getKey, Pair::getValue));
+	 * 
+	 * }
+	 */
 
 	@Override
 	public int deleteCube(String cubeName, String fromPartition, String toPartition) {
@@ -234,7 +220,7 @@ public class MultiCubeImpl implements MultiCube {
 					break;
 				i++;
 			}
-			if(i>0){
+			if (i > 0) {
 				log.debug("Removed {} partitions from {}", i, cubeName);
 			}
 		}
@@ -292,12 +278,12 @@ public class MultiCubeImpl implements MultiCube {
 		return out;
 	}
 
-	public int optimize(){
+	public int optimize() {
 		return this.cubes.values().stream().mapToInt(Cube::optimize).sum();
 	}
+
 	@Override
-	public void saveAsJson(String path)
-	{
+	public void saveAsJson(String path) throws IOException {
 		this.save(path, true);
 	}
 

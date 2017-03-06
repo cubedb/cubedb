@@ -1,5 +1,7 @@
 package org.cubedb.core;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +26,7 @@ public interface MultiCube {
 
 	public boolean hasCube(String cubeName);
 
-	public void save(String path);
+	public void save(String path) throws FileNotFoundException, IOException;
 	public int deleteCube(String cubeName, String fromPartition, String toPartition);
 	public int deleteCube(String cubeName, int keepLastN);
 	public int deleteCube(int keepLastN);
@@ -36,7 +38,7 @@ public interface MultiCube {
 
 	Map<String, Object> getStats();
 
-	public void saveAsJson(String path);
+	public void saveAsJson(String path) throws IOException;
 	public int optimize();
 
 }

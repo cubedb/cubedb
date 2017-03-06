@@ -118,10 +118,17 @@ public class CubeImpl implements Cube {
 		Map<String, List<DataRow>> groupedData = data.stream().collect(Collectors.groupingBy(DataRow::getPartition));
 		// insertSequential(groupedData);
 		//log.debug("The following partitions detected: {}", groupedData.keySet());
+		log.info("Size of items: {}, number of groups", data.size(), groupedData.size());
 		if (data.size() < 1500 || groupedData.size() <= 3)
+		{
+			log.info("Using sequential insert");
 			insertSequential(groupedData);
-		else
+		}
+		else	
+		{
+			log.info("Using parallel insert");
 			insertParallel(groupedData);
+		}
 	}
 
 	protected Map<GroupedSearchResultRow, MutableLong> get(List<Pair<String, Partition>> partitions, List<Filter> filters,
