@@ -100,6 +100,11 @@ public class MultiCubeImpl implements MultiCube {
 		if (!p.exists()) {
 			p.mkdirs();
 		}
+		if (this.isCurrentlySavingOrLoading) {
+			log.warn("Process of saving or loading is currently in progress. This really shouldnt happen");
+			// return;
+		}
+		this.isCurrentlySavingOrLoading = true;
 		File destination;
 		try {
 			destination = Files.createTempDirectory(p.toPath(), ".tmp").toFile();
