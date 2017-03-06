@@ -109,7 +109,7 @@ public class CubeImpl implements Cube {
 			try {
 				threads[i].join();
 			} catch (InterruptedException e) {
-				log.error("Interruppt");
+				log.error("Interrupted");
 			}
 		}
 	}
@@ -119,20 +119,17 @@ public class CubeImpl implements Cube {
 		// insertSequential(groupedData);
 		//log.debug("The following partitions detected: {}", groupedData.keySet());
 		log.info("Size of items: {}, number of groups: {}", data.size(), groupedData.size());
-		if (data.size() < 1500 || groupedData.size() <= 3)
-		{
+		if (data.size() < 1500 || groupedData.size() <= 3) {
 			log.info("Using sequential insert");
 			insertSequential(groupedData);
-		}
-		else	
-		{
+		} else {
 			log.info("Using parallel insert");
 			insertParallel(groupedData);
 		}
 	}
 
 	protected Map<GroupedSearchResultRow, MutableLong> get(List<Pair<String, Partition>> partitions, List<Filter> filters,
-			String fromPartition, String toPartition, String groupBy) {
+														   String fromPartition, String toPartition, String groupBy) {
 		boolean isGroupLookup = groupBy != null;
 		String groupFieldName = isGroupLookup ? groupBy : SearchResult.FAKE_GROUP_FIELD_NAME;
 
