@@ -61,7 +61,6 @@ public class CubeApplication extends ResourceConfig {
 		CubeApplication rConfig = new CubeApplication(config, cube);
 		registerStuff(rConfig);
 		HttpServer server = GrizzlyHttpServerFactory.createHttpServer(baseUri, rConfig);
-				//JettyHttpContainerFactory.createServer(baseUri, rConfig);
 		Log.info("Starting server");
 		server.start();
 		Thread.currentThread().join();
