@@ -59,11 +59,11 @@ public class CubeResource {
 
 		if (!cube.hasCube(cubeName)) {
 			log.warn("Could not find cube {}", cubeName);
-			stats.send("get", cubeName, false, true);
+			stats.send("get", cubeName, false, true, filterCriterias.keySet());
 			throw new NotFoundException(String.format("Could not find cube %s", cubeName));
 		}
 		Map<GroupedSearchResultRow, Long> result = cube.get(cubeName, range, buildFilters(filterCriterias));
-		stats.send("get", cubeName, false, false);
+		stats.send("get", cubeName, false, false,filterCriterias.keySet());
 		return new APIResponse<Map<String, Map<String, Map<String, Long>>>>(CubeUtils.searchResultsToMap(result), info,
 				startTime);
 	}
@@ -78,7 +78,7 @@ public class CubeResource {
 
 		if (!cube.hasCube(cubeName)) {
 			log.warn("Could not find cube {}", cubeName);
-			stats.send("get", cubeName, true, true);
+			stats.send("get", cubeName, true, true,filterCriterias.keySet());
 			throw new NotFoundException(String.format("Could not find cube %s", cubeName));
 		}
 
@@ -87,7 +87,7 @@ public class CubeResource {
 		Map<String, Map<String, Map<String, Map<String, Long>>>> groups = CubeUtils.searchResultsToGroupedMap(result);
 		long t_after_grouping = System.currentTimeMillis();
 		log.debug("Grouping took {}ms"+(t_after_grouping - t_before_grouping));
-		stats.send("get", cubeName, true, false);
+		stats.send("get", cubeName, true, false,filterCriterias.keySet());
 		return new APIResponse<Map<String, Map<String, Map<String, Map<String, Long>>>>>(
 			groups, info, startTime);
 		

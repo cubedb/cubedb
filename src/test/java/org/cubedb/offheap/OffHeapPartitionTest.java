@@ -1,4 +1,4 @@
-package com.badoo.cube.offheap;
+package org.cubedb.offheap;
 
 import static org.junit.Assert.*;
 
@@ -21,11 +21,11 @@ import org.cubedb.core.beans.SearchResult;
 import org.cubedb.core.beans.SearchResultRow;
 import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.offheap.OffHeapPartition;
+import org.cubedb.utils.TestUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.badoo.cube.utils.TestUtils;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;

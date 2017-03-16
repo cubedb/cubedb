@@ -1,4 +1,4 @@
-package com.badoo.cube.api.resources;
+package org.cubedb.api.resources;
 
 import static org.junit.Assert.assertNull;
 
@@ -18,6 +18,7 @@ import org.cubedb.core.Constants;
 import org.cubedb.core.MultiCube;
 import org.cubedb.core.MultiCubeImpl;
 import org.cubedb.core.beans.DataRow;
+import org.cubedb.utils.TestUtils;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -27,7 +28,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.badoo.cube.utils.TestUtils;
 import com.owlike.genson.GenericType;
 import com.owlike.genson.Genson;
 import com.owlike.genson.GensonBuilder;

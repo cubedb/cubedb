@@ -3,7 +3,9 @@ package org.cubedb.stats;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,20 +18,26 @@ import jersey.repackaged.com.google.common.collect.ImmutableMap;
 public class CubeStatsSender implements StatsSender {
 
 	private MultiCube multiCube;
-	private final String CUBE_NAME = "system_stats";
 	private final DateFormat daily = new SimpleDateFormat("yyyy-MM-dd");
-	private final DateFormat hourly = new SimpleDateFormat("yyyy-MM-dd hh");
+	private final DateFormat hourly = new SimpleDateFormat("yyyy-MM-dd HH");
 
 	public CubeStatsSender(MultiCube multiCube) {
 		this.multiCube = multiCube;
 	}
 
 	@Override
-	public void send(String action, String cubeName, boolean groupBy, boolean error) {
+	public void send(String action, String cubeName, boolean groupBy, boolean isError, Collection<String> flags) {
 		if(!Constants.sendStats)
 			return;
 		Date now = new Date();
-		Map<String, String> fields = ImmutableMap.of("action", action, "cube_name", cubeName, "group_by", Boolean.toString(groupBy), "is_error", Boolean.toString(error));
+		Map<String, String> fields = new HashMap<String, String>(); 
+		fields.put("action", action);
+		fields.put("cube_name", cubeName);
+		fields.put("group_by", Boolean.toString(groupBy));
+		fields.put("is_error", Boolean.toString(isError));
+		if(flags!=null)
+			for(String flag: flags)
+				fields.put(flag, StatsSender.FLAG_FIELD_VALUE);
 		Map<String, Long> counters = ImmutableMap.of("c", 1l);
 		List<DataRow> data = new ArrayList<DataRow>(2);
 		DataRow dailyStats = new DataRow();
@@ -49,7 +57,7 @@ public class CubeStatsSender implements StatsSender {
 
 	@Override
 	public void send(String action) {
-		send(action, null, false, false);
+		send(action, "", false, false, null);
 
 	}
 
