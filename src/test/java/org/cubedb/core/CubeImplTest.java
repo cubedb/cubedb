@@ -1,4 +1,4 @@
-package com.badoo.cube.core;
+package org.cubedb.core;
 
 import static org.junit.Assert.assertEquals;
 
@@ -14,11 +14,10 @@ import org.cubedb.core.CubeImpl;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.GroupedSearchResultRow;
+import org.cubedb.utils.TestUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.badoo.cube.utils.TestUtils;
 
 public class CubeImplTest {
 	public static final Logger log = LoggerFactory.getLogger(CubeImplTest.class);

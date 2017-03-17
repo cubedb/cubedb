@@ -1,4 +1,4 @@
-package com.badoo.cube.utils;
+package org.cubedb.utils;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;

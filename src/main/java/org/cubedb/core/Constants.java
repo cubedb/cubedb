@@ -28,5 +28,6 @@ public class Constants {
 	public static final String STATS_IS_READONLY_PARTITION = "isReadOnly";
 	public static final String STATS_NUM_READONLY_PARTITIONS = "numReadOnlyPartitions";
 	public static long KEY_MAP_TTL = 1 * 24 * 3600 * 1000; // 1 day, milliseconds. Please note it is not final.
+	public static final boolean sendStats = true;
 	
 }
