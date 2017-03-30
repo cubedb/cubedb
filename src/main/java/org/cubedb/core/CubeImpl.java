@@ -33,6 +33,8 @@ import org.cubedb.utils.CubeUtils;
 import org.cubedb.utils.MutableLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xerial.snappy.SnappyInputStream;
+import org.xerial.snappy.SnappyOutputStream;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
@@ -43,13 +45,11 @@ import com.owlike.genson.Genson;
 public class CubeImpl implements Cube {
 	public static final Logger log = LoggerFactory.getLogger(CubeImpl.class);
 	Map<String, Partition> partitions;
-	AtomicInteger recordsCount;
 	String partitionColumn;
 
 	public CubeImpl(String partitionColumn) {
 		partitions = new ConcurrentHashMap<String, Partition>();
 		this.partitionColumn = partitionColumn;
-		recordsCount = new AtomicInteger(0);
 	}
 
 	private Partition createNewPartition(String partitionName) {
@@ -62,7 +62,7 @@ public class CubeImpl implements Cube {
 			Partition partition = partitions.computeIfAbsent(p, this::createNewPartition);
 			for (DataRow d : groupedData.get(p)) {
 				partition.insert(d);
-				recordsCount.incrementAndGet();
+				
 			}
 		}
 	}
@@ -256,10 +256,6 @@ public class CubeImpl implements Cube {
 			.collect(Collectors.toMap(Entry::getKey, e -> e.getValue().get()));
 	}
 
-	@Override
-	public int getNumRecords() {
-		return recordsCount.get();
-	}
 
 	@Override
 	public void deletePartition(String partitionName) {
@@ -295,8 +291,12 @@ public class CubeImpl implements Cube {
 	@Override
 	public void save(String saveFileName) throws IOException {
 		Kryo kryo = CubeUtils.getKryoWithRegistrations();
-		OutputStream zip = new BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(saveFileName)));
-		Output output = new Output(zip);
+		OutputStream stream;
+		if(saveFileName.endsWith(".gz"))
+			stream = new GZIPOutputStream(new FileOutputStream(saveFileName));
+		else
+			stream = new SnappyOutputStream(new FileOutputStream(saveFileName));
+		Output output = new Output(stream);
 		kryo.writeClassAndObject(output, partitions);
 		// zip.closeEntry();
 		output.close();
@@ -306,9 +306,13 @@ public class CubeImpl implements Cube {
 	@Override
 	public void load(String saveFileName) throws IOException {
 		Kryo kryo = CubeUtils.getKryoWithRegistrations();
-		Log.TRACE();
-		InputStream zip = new GZIPInputStream(new BufferedInputStream(new FileInputStream(saveFileName)));
-		Input input = new Input(zip);
+		//Log.TRACE();
+		InputStream stream;
+		if(saveFileName.endsWith(".gz"))
+			stream = new GZIPInputStream(new FileInputStream(saveFileName));
+		else
+			stream = new SnappyInputStream(new FileInputStream(saveFileName));
+		Input input = new Input(stream);
 		partitions = (Map<String, Partition>) kryo.readClassAndObject(input);
 		input.close();
 		System.gc();

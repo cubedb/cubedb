@@ -3,6 +3,7 @@ package org.cubedb.stats;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -20,6 +21,7 @@ public class CubeStatsSender implements StatsSender {
 	private MultiCube multiCube;
 	private final DateFormat daily = new SimpleDateFormat("yyyy-MM-dd");
 	private final DateFormat hourly = new SimpleDateFormat("yyyy-MM-dd HH");
+	private final String[] excludeFlags = new String[] {"action", "p"}; // sorted
 
 	public CubeStatsSender(MultiCube multiCube) {
 		this.multiCube = multiCube;
@@ -37,7 +39,8 @@ public class CubeStatsSender implements StatsSender {
 		fields.put("is_error", Boolean.toString(isError));
 		if(flags!=null)
 			for(String flag: flags)
-				fields.put(flag, StatsSender.FLAG_FIELD_VALUE);
+				if(Arrays.binarySearch(excludeFlags, flag)<0)
+					fields.put(flag, StatsSender.FLAG_FIELD_VALUE);
 		Map<String, Long> counters = ImmutableMap.of("c", 1l);
 		List<DataRow> data = new ArrayList<DataRow>(2);
 		DataRow dailyStats = new DataRow();
@@ -47,7 +50,7 @@ public class CubeStatsSender implements StatsSender {
 		dailyStats.setPartition(daily.format(now));
 		data.add(dailyStats);
 		DataRow hourlyStats = new DataRow();
-		hourlyStats.setCubeName(CUBE_NAME + "_hourly");
+		hourlyStats.setCubeName(CUBE_NAME + "_hour");
 		hourlyStats.setFields(fields);
 		hourlyStats.setCounters(counters);
 		hourlyStats.setPartition(hourly.format(now));

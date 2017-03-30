@@ -16,7 +16,7 @@ public interface Cube {
 		String fromPartition, String toPartition, List<Filter> filters, String groupBy);
 	Map<GroupedSearchResultRow, Long> get(
 		int lastRange, List<Filter> filters, String groupBy);
-	int getNumRecords();
+	//int getNumRecords();
 	void deletePartition(String partitionName);
 	TreeSet<String> getPartitions(String from, String to);
 	void save(String saveFileName) throws FileNotFoundException, IOException;

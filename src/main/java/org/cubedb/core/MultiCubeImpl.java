@@ -110,7 +110,7 @@ public class MultiCubeImpl implements MultiCube {
 			destination = Files.createTempDirectory(p.toPath(), ".tmp").toFile();
 			log.info("Saving temporarily to {}", destination.getAbsolutePath());
 			for (Entry<String, Cube> e : this.cubes.entrySet()) {
-				String saveFileName = destination.getAbsolutePath() + "/" + e.getKey() + ".gz";
+				String saveFileName = destination.getAbsolutePath() + "/" + e.getKey() + ".snappy";
 				try {
 					if (!asJson)
 						e.getValue().save(saveFileName);
@@ -156,7 +156,7 @@ public class MultiCubeImpl implements MultiCube {
 
 			for (File cubeFile : p.listFiles()) {
 				log.info("Loading from file {}", cubeFile.getAbsolutePath());
-				String cubeName = cubeFile.getName().replace(".gz", "");
+				String cubeName = cubeFile.getName().replace(".gz", "").replace(".snappy", "");
 				Cube c = createNewCube(partitionColumnName);
 				try {
 					c.load(cubeFile.getAbsolutePath());
