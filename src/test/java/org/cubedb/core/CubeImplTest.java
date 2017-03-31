@@ -11,7 +11,6 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.io.output.NullOutputStream;
 import org.cubedb.core.Cube;
@@ -24,7 +23,6 @@ import org.cubedb.utils.TestUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xerial.snappy.SnappyFramedOutputStream;
 import org.xerial.snappy.SnappyOutputStream;
 
 import com.esotericsoftware.kryo.Kryo;
@@ -343,14 +341,14 @@ public class CubeImplTest {
 	public void testWriteSpeed() throws IOException
 	{
 		Log.ERROR();
-		// List<DataRow> data = TestUtils.genMultiColumnData("test", "p", "f", 5, 16);
+		//List<DataRow> data = TestUtils.genMultiColumnData("test", "p", "f", 5, 16);
 		Cube cube = new CubeImpl("p");
 		//cube.insert(data);
 		Cube dummyCube = new CubeImplWithDummyWrite("p");
 		
-		cube.load("src/test/resources/dumps/event_cube_30_day.gz");
+		cube.load("src/test/resources/dumps/p_30.gz");
 		
-		dummyCube.load("src/test/resources/dumps/event_cube_30_day.gz");
+		dummyCube.load("src/test/resources/dumps/p_30.gz");
 		//dummyCube.insert(data);
 		long ts1 = System.nanoTime();
 		TestUtils.dumpCubeToTmpFile(dummyCube);
@@ -367,9 +365,9 @@ public class CubeImplTest {
 		long load_t2_start = System.nanoTime();
 		cube.load(outSnappy.getAbsolutePath());
 		long load_t2_end = System.nanoTime();
-		outSnappy.length();
-		log.info("Writing with snappy file took {} ms", (ts4-ts3)/1000000);
-		log.info("Writing with gzip compression took {} ms", (ts3-ts2)/1000000);
+		
+		log.info("Writing with snappy file took {} ms and length {} bytes", (ts4-ts3)/1000000, outSnappy.length());
+		log.info("Writing with gzip compression took {} ms and length {} bytes", (ts3-ts2)/1000000, outGzipBuff.length());
 		log.info("Writing to fake file took {} ms", (ts2-ts1)/1000000);
 		
 		log.info("Reading from gzip file took {}ms", (load_t1_end-load_t1_start) / 1000000);
