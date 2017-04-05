@@ -78,7 +78,7 @@ public class MultiCubeImpl implements MultiCube {
 
 	@Override
 	public Map<GroupedSearchResultRow, Long> get(String cubeName, int lastNum, List<Filter> filters, String groupBy) {
-		Cube c = this.cubes.get(cubeName);
+		Cube c = cubes.get(cubeName);
 		if (c != null) {
 			return c.get(lastNum, filters, groupBy);
 		} else {
@@ -88,7 +88,7 @@ public class MultiCubeImpl implements MultiCube {
 
 	@Override
 	public void save(String path) throws IOException {
-		this.save(path, false);
+		save(path, false);
 	}
 
 	public synchronized void save(String path, boolean asJson) throws IOException {
@@ -100,17 +100,16 @@ public class MultiCubeImpl implements MultiCube {
 		if (!p.exists()) {
 			p.mkdirs();
 		}
-		if (this.isCurrentlySavingOrLoading) {
+		if (isCurrentlySavingOrLoading) {
 			log.warn("Process of saving or loading is currently in progress. This really shouldnt happen");
-			// return;
 		}
-		this.isCurrentlySavingOrLoading = true;
+		isCurrentlySavingOrLoading = true;
 		File destination;
 		try {
 			destination = Files.createTempDirectory(p.toPath(), ".tmp").toFile();
 			log.info("Saving temporarily to {}", destination.getAbsolutePath());
-			for (Entry<String, Cube> e : this.cubes.entrySet()) {
-				String saveFileName = destination.getAbsolutePath() + "/" + e.getKey() + ".gz";
+			for (Entry<String, Cube> e : cubes.entrySet()) {
+				String saveFileName = destination.getAbsolutePath() + "/" + e.getKey() + ".snappy";
 				try {
 					if (!asJson)
 						e.getValue().save(saveFileName);
@@ -135,18 +134,18 @@ public class MultiCubeImpl implements MultiCube {
 		}
 		// Close the file
 		lastSaveTsMs = System.currentTimeMillis();
-		this.isCurrentlySavingOrLoading = false;
+		isCurrentlySavingOrLoading = false;
 	}
 
 	@Override
 	public synchronized void load(String path) {
 		long t0 = System.currentTimeMillis();
 
-		if (this.isCurrentlySavingOrLoading) {
+		if (isCurrentlySavingOrLoading) {
 			log.warn("Process of saving or loading is currently in progress.");
 			return;
 		}
-		this.isCurrentlySavingOrLoading = true;
+		isCurrentlySavingOrLoading = true;
 		File p = new File(path);
 		if (p.exists()) {
 			if (p.isFile()) {
@@ -156,21 +155,20 @@ public class MultiCubeImpl implements MultiCube {
 
 			for (File cubeFile : p.listFiles()) {
 				log.info("Loading from file {}", cubeFile.getAbsolutePath());
-				String cubeName = cubeFile.getName().replace(".gz", "");
+				String cubeName = cubeFile.getName().replace(".gz", "").replace(".snappy", "");
 				Cube c = createNewCube(partitionColumnName);
 				try {
 					c.load(cubeFile.getAbsolutePath());
-					this.cubes.put(cubeName, c);
+					cubes.put(cubeName, c);
 				} catch (IOException e) {
 					log.error("Could no load cube {}", cubeName);
 				}
 
 			}
-			// this.loadParallel(p);
 		} else {
 			log.warn("Save path {} does not exist. It will be created next time when saving", path);
 		}
-		this.isCurrentlySavingOrLoading = false;
+		isCurrentlySavingOrLoading = false;
 		long t1 = System.currentTimeMillis();
 		log.info("Loading time: {}ms", t1 - t0);
 	}
@@ -192,10 +190,10 @@ public class MultiCubeImpl implements MultiCube {
 	@Override
 	public int deleteCube(String cubeName, String fromPartition, String toPartition) {
 		int deletedCount = 0;
-		Cube c = this.cubes.get(cubeName);
+		Cube c = cubes.get(cubeName);
 		if (fromPartition == null && toPartition == null) {
-			deletedCount += this.cubes.get(cubeName).getPartitions(null, null).size();
-			this.cubes.remove(cubeName);
+			deletedCount += cubes.get(cubeName).getPartitions(null, null).size();
+			cubes.remove(cubeName);
 
 		} else {
 			if (c != null) {
@@ -211,7 +209,7 @@ public class MultiCubeImpl implements MultiCube {
 
 	@Override
 	public int deleteCube(String cubeName, int keepLastN) {
-		Cube c = this.cubes.get(cubeName);
+		Cube c = cubes.get(cubeName);
 		int deletedCount = 0;
 		if (c != null) {
 			TreeSet<String> partitions = c.getPartitions(null, null);
@@ -236,8 +234,8 @@ public class MultiCubeImpl implements MultiCube {
 	@Override
 	public int deleteCube(int keepLastN) {
 		int c = 0;
-		for (String cubeName : this.cubes.keySet()) {
-			c += this.deleteCube(cubeName, keepLastN);
+		for (String cubeName : cubes.keySet()) {
+			c += deleteCube(cubeName, keepLastN);
 		}
 		return c;
 	}
@@ -245,24 +243,23 @@ public class MultiCubeImpl implements MultiCube {
 	@Override
 	public int deleteCube(String fromPartition, String toPartition) {
 		int c = 0;
-		for (String cubeName : this.cubes.keySet()) {
-			c += this.deleteCube(cubeName, fromPartition, toPartition);
+		for (String cubeName : cubes.keySet()) {
+			c += deleteCube(cubeName, fromPartition, toPartition);
 		}
 		return c;
 	}
 
 	@Override
 	public String getPath() {
-		return this.savePath;
+		return savePath;
 	}
 
 	@Override
 	public Map<String, Object> getStats() {
-		Map<String, Map<String, Object>> partitionStats = this.cubes.entrySet().stream()
+		Map<String, Map<String, Object>> partitionStats = cubes.entrySet().stream()
 				.collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getStats()));
 		Map<String, Object> out = new HashMap<String, Object>();
 		out.put("cubeStats", partitionStats);
-		// this.columns.values().stream().mapToLong(Column::size).sum();
 		out.put(Constants.STATS_COLUMN_SIZE,
 				partitionStats.values().stream().mapToLong(e -> (Long) e.get(Constants.STATS_COLUMN_SIZE)).sum());
 		out.put(Constants.STATS_METRIC_SIZE,
@@ -284,12 +281,12 @@ public class MultiCubeImpl implements MultiCube {
 	}
 
 	public int optimize() {
-		return this.cubes.values().stream().mapToInt(Cube::optimize).sum();
+		return cubes.values().stream().mapToInt(Cube::optimize).sum();
 	}
 
 	@Override
 	public void saveAsJson(String path) throws IOException {
-		this.save(path, true);
+		save(path, true);
 	}
 
 }

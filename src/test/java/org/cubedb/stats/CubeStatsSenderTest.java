@@ -5,6 +5,7 @@ import static org.junit.Assert.*;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +21,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import jersey.repackaged.com.google.common.collect.ImmutableList;
 import jersey.repackaged.com.google.common.collect.ImmutableSet;
 
 public class CubeStatsSenderTest {
@@ -125,12 +127,15 @@ public class CubeStatsSenderTest {
 	public void testFullStats() {
 		List<DataRow> results = new ArrayList<DataRow>();
 		StatsSender stats = new CubeStatsSender(getTestMultiCube(results));
-		stats.send("action_name", "cube_name", true, true, ImmutableSet.of("f1"));
+		Collection<String> flags = ImmutableList.of( "f1", "p", "action");
+		stats.send("action_name", "cube_name", true, true, flags);
 		for(DataRow row: results){
 			assertTrue(row.getCubeName().startsWith(StatsSender.CUBE_NAME));
 			log.info(row.toString());
 			assertEquals(row.getFields().get("cube_name"), "cube_name");
 			assertEquals(row.getFields().get("f1"), StatsSender.FLAG_FIELD_VALUE);
+			assertNull(row.getFields().get("p"));
+			assertEquals(row.getFields().get("action"), "action_name");
 		}
 		
 	}

@@ -302,6 +302,14 @@ public class TestUtils {
 
 	public static File dumpCubeToTmpFile(Cube c) throws FileNotFoundException, IOException
 	{
+		File destination = File.createTempFile("cube_", ".snappy");
+		c.save(destination.getAbsolutePath());
+		destination.deleteOnExit();
+		return destination;
+	}
+	
+	public static File dumpCubeToTmpGzipFile(Cube c) throws FileNotFoundException, IOException
+	{
 		File destination = File.createTempFile("cube_", ".gz");
 		c.save(destination.getAbsolutePath());
 		destination.deleteOnExit();

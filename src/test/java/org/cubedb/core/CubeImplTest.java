@@ -2,22 +2,32 @@ package org.cubedb.core;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.output.NullOutputStream;
 import org.cubedb.core.Cube;
 import org.cubedb.core.CubeImpl;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.GroupedSearchResultRow;
+import org.cubedb.utils.CubeUtils;
 import org.cubedb.utils.TestUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.xerial.snappy.SnappyOutputStream;
+
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
+import com.esotericsoftware.minlog.Log;
 
 public class CubeImplTest {
 	public static final Logger log = LoggerFactory.getLogger(CubeImplTest.class);
@@ -167,11 +177,6 @@ public class CubeImplTest {
 		Cube cube = new CubeImpl("ts");
 		List<DataRow> data = TestUtils.genMultiColumnData("f", numFields, numValues);
 		for (int i = 0; i < numPartitions; i++) {
-			// List<DataRow> data = TestUtils.genMultiColumnData("f", numFields,
-			// numValues);
-
-			// List<DataRow> data = TestUtils.genSimpleData("f0", "c",
-			// numRecords);
 			String partition = "p_" + (1000 + i);
 			for (DataRow d : data) {
 				d.setPartition(partition);
@@ -182,7 +187,7 @@ public class CubeImplTest {
 		log.info("Starting test");
 		long t0, t1, recordsPerSecond;
 		t0 = System.nanoTime();
-		File dstF = File.createTempFile("cube", ".zip");
+		File dstF = File.createTempFile("cube", ".snappy");
 		String dst = dstF.getAbsolutePath();
 		log.info("Saving cube to {}", dst);
 		cube.save(dst);
@@ -289,5 +294,83 @@ public class CubeImplTest {
 		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>(), null));
 		cube.insert(TestUtils.genDataRowList("p_1100", "new_field", "not_null"));
 		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_" + (1100 + numPartitions), new ArrayList<Filter>(), null));
+	}
+	
+	static class CubeImplWithDummyWrite extends CubeImpl{
+
+		public CubeImplWithDummyWrite(String partitionColumn) {
+			super(partitionColumn);
+
+		}
+		
+		@Override
+		public void save(String saveFileName) throws IOException {
+			Kryo kryo = CubeUtils.getKryoWithRegistrations();
+			OutputStream zip = new BufferedOutputStream(new NullOutputStream());
+			Output output = new Output(zip);
+			kryo.writeClassAndObject(output, partitions);
+			// zip.closeEntry();
+			output.close();
+			// zip.close();
+		}
+		
+	}
+	
+	static class CubeImplWriteBuff extends CubeImpl{
+
+		public CubeImplWriteBuff(String partitionColumn) {
+			super(partitionColumn);
+		}
+
+		
+		@Override
+		public void save(String saveFileName) throws IOException {
+			Kryo kryo = CubeUtils.getKryoWithRegistrations();
+			OutputStream zip = new SnappyOutputStream(new FileOutputStream(saveFileName));
+			Output output = new Output(zip);
+			kryo.writeClassAndObject(output, partitions);
+			// zip.closeEntry();
+			output.close();
+			// zip.close();
+		}
+		
+		
+	}
+	
+	@Test
+	public void testWriteSpeed() throws IOException
+	{
+		Log.ERROR();
+		//List<DataRow> data = TestUtils.genMultiColumnData("test", "p", "f", 5, 16);
+		Cube cube = new CubeImpl("p");
+		//cube.insert(data);
+		Cube dummyCube = new CubeImplWithDummyWrite("p");
+		
+		cube.load("src/test/resources/dumps/p_30.gz");
+		
+		dummyCube.load("src/test/resources/dumps/p_30.gz");
+		//dummyCube.insert(data);
+		long ts1 = System.nanoTime();
+		TestUtils.dumpCubeToTmpFile(dummyCube);
+		long ts2 = System.nanoTime();
+		File outGzipBuff = TestUtils.dumpCubeToTmpGzipFile(cube);
+		long ts3 = System.nanoTime();
+		File outSnappy = TestUtils.dumpCubeToTmpFile(cube);
+		long ts4 = System.nanoTime();
+		cube = new CubeImpl("p");
+		long load_t1_start = System.nanoTime();
+		cube.load(outGzipBuff.getAbsolutePath());
+		long load_t1_end = System.nanoTime();
+		cube = new CubeImpl("p");
+		long load_t2_start = System.nanoTime();
+		cube.load(outSnappy.getAbsolutePath());
+		long load_t2_end = System.nanoTime();
+		
+		log.info("Writing with snappy file took {} ms and length {} bytes", (ts4-ts3)/1000000, outSnappy.length());
+		log.info("Writing with gzip compression took {} ms and length {} bytes", (ts3-ts2)/1000000, outGzipBuff.length());
+		log.info("Writing to fake file took {} ms", (ts2-ts1)/1000000);
+		
+		log.info("Reading from gzip file took {}ms", (load_t1_end-load_t1_start) / 1000000);
+		log.info("Reading from snappy file took {}ms", (load_t2_end-load_t2_start) / 1000000);
 	}
 }
