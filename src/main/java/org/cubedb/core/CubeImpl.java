@@ -39,7 +39,6 @@ import org.xerial.snappy.SnappyOutputStream;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import com.esotericsoftware.minlog.Log;
 import com.owlike.genson.Genson;
 
 public class CubeImpl implements Cube {
@@ -298,25 +297,24 @@ public class CubeImpl implements Cube {
 			stream = new SnappyOutputStream(new FileOutputStream(saveFileName));
 		Output output = new Output(stream);
 		kryo.writeClassAndObject(output, partitions);
-		// zip.closeEntry();
 		output.close();
-		// zip.close();
 	}
 
 	@Override
 	public void load(String saveFileName) throws IOException {
 		Kryo kryo = CubeUtils.getKryoWithRegistrations();
-		//Log.TRACE();
 		InputStream stream;
 		if(saveFileName.endsWith(".gz"))
 			stream = new GZIPInputStream(new FileInputStream(saveFileName));
 		else
-			stream = new SnappyInputStream(new FileInputStream(saveFileName));
+			if(saveFileName.endsWith(".snappy"))
+				stream = new SnappyInputStream(new FileInputStream(saveFileName));
+			else
+				throw new IOException("Cannot recognize the file extension for file "+saveFileName);
 		Input input = new Input(stream);
 		partitions = (Map<String, Partition>) kryo.readClassAndObject(input);
 		input.close();
 		System.gc();
-		// zip.close();
 	}
 
 	@Override
