@@ -61,7 +61,7 @@ public class CubeImpl implements Cube {
 			Partition partition = partitions.computeIfAbsent(p, this::createNewPartition);
 			for (DataRow d : groupedData.get(p)) {
 				partition.insert(d);
-				
+
 			}
 		}
 	}
@@ -212,9 +212,6 @@ public class CubeImpl implements Cube {
 				.orElse(toPartition);
 		Collections.shuffle(namePartitionPair);
 		final List<List<Pair<String, Partition>>> partitionSlices = CubeUtils.partitionList(namePartitionPair);
-		 //log.info("Partitions are distributed in this way: {}",
-		 //partitionSlices.stream().map( s -> s.stream().map(p ->
-		 //p.getT()).collect(Collectors.toList()).toString()).collect(Collectors.toList()));
 
 		Searcher[] searchers = new Searcher[partitionSlices.size()];
 		Thread[] threads = new Thread[partitionSlices.size()];

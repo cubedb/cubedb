@@ -279,11 +279,7 @@ public class OffHeapPartition implements Partition {
 		for (int i = 0; i < fieldLookup.size(); i++) {
 			String fieldName = fieldLookup.getKey(i);
 			Lookup side = lookups.get(fieldName);
-			long[][][] sideCounters = new long[side.size()][1][metricLookup.size()];
-			for (int s = 0; s < sideCounters.length; s++)
-				for (int m = 0; m < metricLookup.size(); m++)
-					sideCounters[s][FAKE_GROUP_VALUE_ID][m] = 0l;
-			out[i] = sideCounters;
+			out[i] = new long[side.size()][1][metricLookup.size()];
 		}
 		return out;
 	}
@@ -296,12 +292,7 @@ public class OffHeapPartition implements Partition {
 		for (int f = 0; f < lookupSize; f++) {
 			String fieldName = fieldLookup.getKey(f);
 			Lookup side = lookups.get(fieldName);
-			long[][][] sideCounters = new long[side.size()][groupSide.size()][metricLookupSize];
-			for (int s = 0; s < sideCounters.length; s++)
-				for (int g = 0; g < groupSide.size(); g++)
-					for (int m = 0; m < metricLookupSize; m++)
-						sideCounters[s][g][m] = 0l;
-			out[f] = sideCounters;
+			out[f] = new long[side.size()][groupSide.size()][metricLookupSize];
 		}
 		return out;
 	}

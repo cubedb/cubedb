@@ -34,24 +34,24 @@ public class GroupedSearchResultRow extends SearchResultRow {
 		 */
 	}
 
-	
+
 	@Override
 	public int hashCode() {
 		return cachedHashCode;
-	} 
+	}
 
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
-		if(this.hashCode()!=obj.hashCode())
+		if (this.hashCode()!=obj.hashCode())
 			return false;
 		if (!super.equals(obj))
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
 		GroupedSearchResultRow other = (GroupedSearchResultRow) obj;
-	
+
 		if (groupFieldName == null) {
 			if (other.groupFieldName != null)
 				return false;
