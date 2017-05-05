@@ -310,7 +310,7 @@ public class OffHeapPartition implements Partition {
 		}
 
 		final int groupFieldId;
-		// field names -> (column value id -> (group value id -> (metric name -> counter)))
+		// field names -> (column value id -> (group value id -> (metric index -> counter)))
 		final CounterContainer sideCounterCountainer = new CounterContainer(fieldLookup, metricLookup, lookups);
 
 		/*

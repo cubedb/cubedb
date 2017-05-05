@@ -57,14 +57,10 @@ public class SearchResult {
 					for (int m = 0; m < sideCounters[sn][sv][g].length; m++) {
 						String metricName = metricLookup.getKey(m);
 						if(sideCounters[sn][sv][g][m] > 0){
-							GroupedSearchResultRow r = new GroupedSearchResultRow(
-									groupFieldName,
-									groupFieldValue,
-									sideName,
-									sideValue,
-									metricName
+							GroupedSearchResultRow row = new GroupedSearchResultRow(
+								groupFieldName, groupFieldValue, sideName, sideValue, metricName
 							);
-							groupedResult.put(r, sideCounters[sn][sv][g][m]);
+							groupedResult.put(row, sideCounters[sn][sv][g][m]);
 						}
 					}
 				}

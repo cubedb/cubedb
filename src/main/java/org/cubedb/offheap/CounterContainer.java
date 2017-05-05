@@ -9,7 +9,7 @@ class CounterContainer {
     private long[][][][] sideCounters;
 	private Lookup fieldLookup;
 	private Lookup metricLookup;
-	protected Map<String, Lookup> lookups;
+	private Map<String, Lookup> lookups;
 
 	CounterContainer(Lookup fieldLookup, Lookup metricLookup, Map<String, Lookup> lookups) {
         this.fieldLookup = fieldLookup;
