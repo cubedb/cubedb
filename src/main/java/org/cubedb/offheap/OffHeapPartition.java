@@ -274,29 +274,6 @@ public class OffHeapPartition implements Partition {
 
 	}
 
-	protected long[][][][] initSideCounters() {
-		final long[][][][] out = new long[fieldLookup.size()][][][];
-		for (int i = 0; i < fieldLookup.size(); i++) {
-			String fieldName = fieldLookup.getKey(i);
-			Lookup side = lookups.get(fieldName);
-			out[i] = new long[side.size()][1][metricLookup.size()];
-		}
-		return out;
-	}
-
-	protected long[][][][] initGroupedSideCounters(final String groupFieldName) {
-		final long[][][][] out = new long[fieldLookup.size()][][][];
-		final Lookup groupSide = lookups.get(groupFieldName);
-		final int metricLookupSize = metricLookup.size();
-		final int lookupSize = fieldLookup.size();
-		for (int f = 0; f < lookupSize; f++) {
-			String fieldName = fieldLookup.getKey(f);
-			Lookup side = lookups.get(fieldName);
-			out[f] = new long[side.size()][groupSide.size()][metricLookupSize];
-		}
-		return out;
-	}
-
 	protected Column[] getColumnsAsArray() {
 		final Column[] columnsArray = new Column[columns.size()];
 		for (Entry<String, Column> e : columns.entrySet()) {
@@ -334,7 +311,7 @@ public class OffHeapPartition implements Partition {
 
 		final int groupFieldId;
 		// field names -> (column value id -> (group value id -> (metric name -> counter)))
-		final CounterContainer sideCounterCountainer;
+		final CounterContainer sideCounterCountainer = new CounterContainer(fieldLookup, metricLookup, lookups);
 
 		/*
 		 * When field grouping is *not required* we basically just use a
@@ -342,10 +319,10 @@ public class OffHeapPartition implements Partition {
 		 */
 		if (doFieldGrouping) {
 			groupFieldId = fieldLookup.getValue(groupFieldName);
-			sideCounterCountainer = new CounterContainer(initGroupedSideCounters(groupFieldName));
+			sideCounterCountainer.initGroupedSideCounters(groupFieldName);
 		} else {
 			groupFieldId = FAKE_GROUP_VALUE_ID;
-			sideCounterCountainer = new CounterContainer(initSideCounters());
+			sideCounterCountainer.initSideCounters();
 		}
 
 		// creating an empty result set, with id's
