@@ -334,7 +334,7 @@ public class OffHeapPartition implements Partition {
 
 		final int groupFieldId;
 		// field names -> (column value id -> (group value id -> (metric name -> counter)))
-		final long[][][][] sideCounters;
+		final CounterContainer sideCounterCountainer;
 
 		/*
 		 * When field grouping is *not required* we basically just use a
@@ -342,10 +342,10 @@ public class OffHeapPartition implements Partition {
 		 */
 		if (doFieldGrouping) {
 			groupFieldId = fieldLookup.getValue(groupFieldName);
-			sideCounters = initGroupedSideCounters(groupFieldName);
+			sideCounterCountainer = new CounterContainer(initGroupedSideCounters(groupFieldName));
 		} else {
 			groupFieldId = FAKE_GROUP_VALUE_ID;
-			sideCounters = initSideCounters();
+			sideCounterCountainer = new CounterContainer(initSideCounters());
 		}
 
 		// creating an empty result set, with id's
@@ -477,7 +477,7 @@ public class OffHeapPartition implements Partition {
 
 					final int columnValueId = columnValues[fieldId];
 					for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-						sideCounters[fieldId][columnValueId][groupFieldValueId][mIndex] += metricValues[mIndex];
+						sideCounterCountainer.add(fieldId, columnValueId, groupFieldValueId, mIndex, metricValues[mIndex]);
 					}
 				}
 			}
@@ -486,9 +486,9 @@ public class OffHeapPartition implements Partition {
 
 		final long t_pre_build = System.nanoTime();
 		final SearchResult result = SearchResult.buildFromResultArray(
-			  sideCounters, totalCounters,
-			  doFieldGrouping, groupFieldName,
-			  lookups, fieldLookup, metricLookup
+			sideCounterCountainer.getCounters(), totalCounters,
+			doFieldGrouping, groupFieldName,
+			lookups, fieldLookup, metricLookup
 		);
 		final long t1 = System.nanoTime();
 		log.debug("Building result from array took {}ms", (t1 - t_pre_build) / 1000000.0);
