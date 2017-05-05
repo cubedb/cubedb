@@ -463,7 +463,7 @@ public class OffHeapPartition implements Partition {
 
 		final long t_pre_build = System.nanoTime();
 		final SearchResult result = SearchResult.buildFromResultArray(
-			sideCounterCountainer.getCounters(), totalCounters,
+			sideCounterCountainer, totalCounters,
 			doFieldGrouping, groupFieldName,
 			lookups, fieldLookup, metricLookup
 		);

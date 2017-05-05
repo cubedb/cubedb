@@ -7,6 +7,7 @@ import java.util.Collections;
 import org.cubedb.core.lookups.Lookup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.cubedb.offheap.CounterContainer;
 
 import com.esotericsoftware.minlog.Log;
 
@@ -35,7 +36,7 @@ public class SearchResult {
 	}
 
 	// TODO: re-implement with using a list instead of hashmap.
-	public static SearchResult buildFromResultArray(long[][][][] sideCounters,
+	public static SearchResult buildFromResultArray(CounterContainer sideCounters,
 													long[][] totalCounters,
 													boolean isGroupLookup,
 													String groupFieldName,
@@ -43,31 +44,11 @@ public class SearchResult {
 													Lookup fieldLookup,
 													Lookup metricLookup) {
 		final Map<GroupedSearchResultRow, Long> groupedResult = new HashMap<GroupedSearchResultRow, Long>(10000);
-		Lookup groupFieldLookup = lookups.get(groupFieldName);
-		if (!isGroupLookup) {
-			groupFieldName = FAKE_GROUP_FIELD_NAME;
-		}
-		for (int sn = 0; sn < sideCounters.length; sn++) {
-			String sideName = fieldLookup.getKey(sn);
-			final Lookup sideLookup = lookups.get(sideName);
-			for (int sv = 0; sv < sideCounters[sn].length; sv++) {
-				String sideValue = sideLookup.getKey(sv);
-				for (int g = 0; g < sideCounters[sn][sv].length; g++) {
-					String groupFieldValue = isGroupLookup ? groupFieldLookup.getKey(g) : FAKE_GROUP_FIELD_VALUE;
-					for (int m = 0; m < sideCounters[sn][sv][g].length; m++) {
-						String metricName = metricLookup.getKey(m);
-						if(sideCounters[sn][sv][g][m] > 0){
-							GroupedSearchResultRow row = new GroupedSearchResultRow(
-								groupFieldName, groupFieldValue, sideName, sideValue, metricName
-							);
-							groupedResult.put(row, sideCounters[sn][sv][g][m]);
-						}
-					}
-				}
-			}
-		}
+
+        sideCounters.saveResultTo(groupedResult);
 		log.debug("Result size is {}", groupedResult.size());
 
+		Lookup groupFieldLookup = lookups.get(groupFieldName);
 		Map<String, Map<String, Long>> totalCounts = new HashMap<String, Map<String, Long>>(totalCounters.length);
 		for (int m = 0; m < totalCounters.length; m++) {
 			Map<String, Long> groupValueToCounter = new HashMap(totalCounters[m].length);
