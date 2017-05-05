@@ -56,7 +56,7 @@ public class SearchResult {
 					String groupFieldValue = isGroupLookup ? groupFieldLookup.getKey(g) : FAKE_GROUP_FIELD_VALUE;
 					for (int m = 0; m < sideCounters[sn][sv][g].length; m++) {
 						String metricName = metricLookup.getKey(m);
-						if(sideCounters[sn][sv][g][m]!=0){
+						if(sideCounters[sn][sv][g][m] > 0){
 							GroupedSearchResultRow r = new GroupedSearchResultRow(
 									groupFieldName,
 									groupFieldValue,
