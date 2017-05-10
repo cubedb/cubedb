@@ -194,7 +194,7 @@ public class CubeResource {
 	public APIResponse<Map<String, String>> save(@Context UriInfo info) throws FileNotFoundException, IOException {
 		long startTs = System.currentTimeMillis();
 		log.info("Saving to {}", cube.getPath());
-		stats.send("save");
+		// stats.send("save");
 		cube.save(cube.getPath());
 		log.info("Saving finished");
 		return new APIResponse<Map<String, String>>(ImmutableMap.of("savePath", cube.getPath()), info, startTs);
@@ -206,7 +206,7 @@ public class CubeResource {
 		long startTs = System.currentTimeMillis();
 		String path = cube.getPath() + "/json";
 		log.info("Saving to {}", path);
-		stats.send("saveAsJSON");
+		// stats.send("saveAsJSON");
 		cube.saveAsJson(path);
 		log.info("Saving finished");
 		return new APIResponse<Map<String, String>>(ImmutableMap.of("savePath", path), info, startTs);
