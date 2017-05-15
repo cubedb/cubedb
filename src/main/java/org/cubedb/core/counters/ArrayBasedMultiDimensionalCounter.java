@@ -1,6 +1,5 @@
 package org.cubedb.core.counters;
 
-
 public class ArrayBasedMultiDimensionalCounter implements MultiDimensionalCounter {
 	private final long[][][] values;
 
@@ -13,11 +12,8 @@ public class ArrayBasedMultiDimensionalCounter implements MultiDimensionalCounte
 	}
 
 	@Override
-	public void add(long value, final int... fields) {
-		final int f0 = fields[0];
-		final int f1 = fields[1];
-		final int f2 = fields[2];
-		values[f0][f1][f2]+=value;
+	public void add(long value, int f0, int f1, int f2, int f3) {
+		values[f0][f1][f2] += value;
 
 	}
 
@@ -27,7 +23,7 @@ public class ArrayBasedMultiDimensionalCounter implements MultiDimensionalCounte
 			for (int j = 0; j < values[i].length; j++)
 				for (int k = 0; k < values[i][j].length; k++) {
 					final long v = values[i][j][k];
-					if(v>0)
+					if (v > 0)
 						action.accept(i, j, k, 0, v);
 				}
 

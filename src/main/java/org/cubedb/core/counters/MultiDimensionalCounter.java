@@ -1,9 +1,6 @@
 package org.cubedb.core.counters;
 
-import java.util.function.ObjLongConsumer;
-
 public interface MultiDimensionalCounter {
-public void add(long values, int... fields);
-//public void forEach(ObjLongConsumer<int[]> action);
-public void forEach(QuartIntLongConsumer action);
+	public void forEach(QuartIntLongConsumer action);
+	void add(long value, int f0, int f1, int f2, int f3);
 }

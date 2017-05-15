@@ -16,13 +16,10 @@ public class ListListMultiDimensionalCounter implements MultiDimensionalCounter 
 	}
 
 	@Override
-	public void add(long value, final int... fields) {
-		final int f0 = fields[0];
-		final int f1 = fields[1];
-		final int f2 = fields[2];
+	public void add(long value, int f0, int f1, int f2, int f3) {
 		if (values[f0][f1][f2] == null)
 			values[f0][f1][f2] = new TIntLongHashMap();
-		values[f0][f1][f2].adjustOrPutValue(fields[3], value, value);
+		values[f0][f1][f2].adjustOrPutValue(f3, value, value);
 
 	}
 
@@ -40,7 +37,7 @@ public class ListListMultiDimensionalCounter implements MultiDimensionalCounter 
 
 							@Override
 							public boolean execute(int a, long b) {
-								if(b>0)
+								if (b > 0)
 									action.accept(f1, f2, f3, a, b);
 								return true;
 							}
