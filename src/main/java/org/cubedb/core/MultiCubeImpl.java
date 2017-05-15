@@ -46,7 +46,9 @@ public class MultiCubeImpl implements MultiCube {
 
 	@Override
 	public void insert(List<DataRow> data) {
-		Lock l = lock.writeLock();
+		Lock l = lock.readLock(); // Although we are technically writing here,
+									// we should not insert there only when
+									// there is save
 		l.lock();
 		try {
 			Map<String, List<DataRow>> groupedData = data.stream().collect(Collectors.groupingBy(DataRow::getCubeName));
@@ -104,7 +106,9 @@ public class MultiCubeImpl implements MultiCube {
 	}
 
 	public void save(String path, boolean asJson) throws IOException {
-		Lock l = lock.writeLock();
+		Lock l = lock.writeLock(); // although we are not modifying the data
+									// here, we need to be sure nothing else is
+									// accessing the data here.
 		l.lock();
 		try {
 			File p = new File(path);
@@ -115,14 +119,11 @@ public class MultiCubeImpl implements MultiCube {
 			if (!p.exists()) {
 				p.mkdirs();
 			}
-			if (isCurrentlySavingOrLoading) {
-				log.warn("Process of saving or loading is currently in progress. This really shouldnt happen");
-			}
-			isCurrentlySavingOrLoading = true;
+
 			File destination;
 			destination = Files.createTempDirectory(p.toPath(), ".tmp").toFile();
 			log.info("Saving temporarily to {}", destination.getAbsolutePath());
-			for (Entry<String, Cube> e : cubes.entrySet()) {
+			cubes.entrySet().stream().parallel().forEach(e -> {
 				String saveFileName = destination.getAbsolutePath() + "/" + e.getKey() + ".snappy";
 				try {
 					if (!asJson)
@@ -140,18 +141,17 @@ public class MultiCubeImpl implements MultiCube {
 					log.error("Could not save {} in {}", e.getKey(), saveFileName);
 					e1.printStackTrace();
 				}
-			}
+			});
 			destination.delete();
 		} finally {
 			l.unlock();
 			lastSaveTsMs = System.currentTimeMillis();
-			isCurrentlySavingOrLoading = false;
 		}
 
 	}
 
 	@Override
-	public synchronized void load(String path) {
+	public void load(String path) {
 		long t0 = System.currentTimeMillis();
 		Lock l = lock.writeLock();
 		l.lock();

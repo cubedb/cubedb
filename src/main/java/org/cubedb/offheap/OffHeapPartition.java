@@ -6,12 +6,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.cubedb.core.Column;
-import org.cubedb.core.ColumnDoesNotExistException;
 import org.cubedb.core.Constants;
 import org.cubedb.core.KeyMap;
 import org.cubedb.core.Metric;
@@ -19,7 +21,6 @@ import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.SearchResult;
-import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.core.lookups.HashMapLookup;
 import org.cubedb.core.lookups.Lookup;
 import org.cubedb.core.tiny.TinyColumn;
@@ -56,6 +57,7 @@ public class OffHeapPartition implements Partition {
 	protected long lastAppendTs;
 	protected long startupTs;
 	protected long lastSaveTs;
+	protected final ReadWriteLock lock;
 
 	public OffHeapPartition() {
 		// log.debug("Initializing Partition");
@@ -64,6 +66,7 @@ public class OffHeapPartition implements Partition {
 		columns = new HashMap<String, Column>(5);
 		metrics = new HashMap<String, Metric>(1);
 		metricLookup = new HashMapLookup(false);
+		lock= new ReentrantReadWriteLock(false);
 
 	}
 
@@ -85,8 +88,6 @@ public class OffHeapPartition implements Partition {
 
 	protected void initializeMap() {
 		log.debug("Re-Initializing map");
-		long t0 = System.currentTimeMillis();
-
 		final Column[] fields = new Column[fieldLookup.getKeys().length];
 		for (int i = 0; i < fields.length; i++) {
 			String fieldKey = fieldLookup.getKey(i);
@@ -232,8 +233,15 @@ public class OffHeapPartition implements Partition {
 	}
 
 	@Override
-	public synchronized void insert(DataRow row) {
+	public void insert(DataRow row) {
+		Lock l = lock.writeLock();
+		l.lock();
+		try{
 		_insert(row);
+		}
+		finally{
+		   l.unlock();
+		}
 		lastInsertTs = System.currentTimeMillis();
 	}
 
