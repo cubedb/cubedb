@@ -19,7 +19,7 @@ public class MultiCubeConcurrencyTest {
 
 	@Test
 	public void testParallelGetAndSave() throws IOException, InterruptedException {
-		
+
 		Path savePath = Files.createTempDirectory("savePath");
 		MultiCubeImpl c = new MultiCubeImpl(savePath.toString());
 		int numCubes = Runtime.getRuntime().availableProcessors();
@@ -39,9 +39,10 @@ public class MultiCubeConcurrencyTest {
 		long saveTime = saver.totalTimeNs;
 		long getTime = t2 - t1;
 		long allTime = t3 - t0;
-		log.info("Took {}mks to save, {}mks to get, {}mks alltogether in parallel", saveTime/1000, getTime/1000, allTime/1000);
+		log.info("Took {}mks to save, {}mks to get, {}mks alltogether in parallel", saveTime / 1000, getTime / 1000,
+				allTime / 1000);
 		assertTrue(allTime < getTime + saveTime);
-		assertTrue(Long.max(getTime, saveTime) *100/allTime >80 );
+		assertTrue(Long.max(getTime, saveTime) * 100 / allTime > 80);
 		FileUtils.deleteDirectory(savePath.toFile());
 	}
 
@@ -67,11 +68,12 @@ public class MultiCubeConcurrencyTest {
 		long saveTime1 = s1.totalTimeNs;
 		long saveTime2 = s2.totalTimeNs;
 		long allTime = t1 - t0;
-		//log.info("Took {}mks to save, {}mks to get, {}mks alltogether in parallel", saveTime/1000, getTime/1000, allTime/1000);
+		// log.info("Took {}mks to save, {}mks to get, {}mks alltogether in
+		// parallel", saveTime/1000, getTime/1000, allTime/1000);
 		assertTrue(allTime >= saveTime1 + saveTime2);
 		FileUtils.deleteDirectory(savePath.toFile());
 	}
-	
+
 	protected static class Saver implements Runnable {
 		public long totalTimeNs;
 		final String savePath;
@@ -90,7 +92,7 @@ public class MultiCubeConcurrencyTest {
 				long t0 = System.nanoTime();
 				c.save(savePath);
 				totalTimeNs = System.nanoTime() - t0;
-				log.info("Finished. Saving took {}ms", totalTimeNs/1000000);
+				log.info("Finished. Saving took {}ms", totalTimeNs / 1000000);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
