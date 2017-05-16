@@ -194,9 +194,7 @@ public class OffHeapPartition implements Partition {
 
 		if (newFields.size() > 0) {
 			for (String f : newFields) {
-				final int newColumnIndex = fieldLookup.getValue(f);
 				lookups.put(f, new HashMapLookup());
-				// log.debug("Index for {} is {}", f, newColumnIndex);
 				columns.put(f, new TinyColumn(size));
 			}
 			_insert(row);
