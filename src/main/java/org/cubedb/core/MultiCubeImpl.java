@@ -10,9 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeSet;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
 import org.cubedb.core.beans.DataRow;
@@ -27,8 +24,6 @@ public class MultiCubeImpl implements MultiCube {
 	protected boolean isCurrentlySavingOrLoading;
 	protected String savePath;
 
-	protected final ReadWriteLock lock;
-
 	Map<String, Cube> cubes = new HashMap<String, Cube>();
 
 	final String partitionColumnName = Constants.DEFAULT_PARTITION_NAME;
@@ -36,7 +31,6 @@ public class MultiCubeImpl implements MultiCube {
 	public MultiCubeImpl(String savePath) {
 		this.savePath = savePath;
 		this.isCurrentlySavingOrLoading = false;
-		lock = new ReentrantReadWriteLock(false);
 	}
 
 	private Cube createNewCube(String cubeName) {
@@ -45,21 +39,14 @@ public class MultiCubeImpl implements MultiCube {
 	}
 
 	@Override
-	public void insert(List<DataRow> data) {
-		Lock l = lock.readLock(); // Although we are technically writing here,
-									// we should not insert there only when
-									// there is save
-		l.lock();
-		try {
-			Map<String, List<DataRow>> groupedData = data.stream().collect(Collectors.groupingBy(DataRow::getCubeName));
-			for (Entry<String, List<DataRow>> cubeEntry : groupedData.entrySet()) {
-				final String cubeName = cubeEntry.getKey();
-				final List<DataRow> cubeData = cubeEntry.getValue();
-				cubes.computeIfAbsent(cubeName, this::createNewCube).insert(cubeData);
-			}
-		} finally {
-			l.unlock();
+	public synchronized void insert(List<DataRow> data) {
+		Map<String, List<DataRow>> groupedData = data.stream().collect(Collectors.groupingBy(DataRow::getCubeName));
+		for (Entry<String, List<DataRow>> cubeEntry : groupedData.entrySet()) {
+			final String cubeName = cubeEntry.getKey();
+			final List<DataRow> cubeData = cubeEntry.getValue();
+			cubes.computeIfAbsent(cubeName, this::createNewCube).insert(cubeData);
 		}
+
 	}
 
 	@Override
@@ -105,84 +92,71 @@ public class MultiCubeImpl implements MultiCube {
 		save(path, false);
 	}
 
-	public void save(String path, boolean asJson) throws IOException {
-		Lock l = lock.writeLock(); // although we are not modifying the data
-									// here, we need to be sure nothing else is
-									// accessing the data here.
-		l.lock();
-		try {
-			File p = new File(path);
-			if (p.exists() && p.isFile()) {
-				log.error("Attempting to save to directory");
-				throw new InvalidParameterException("Path specified is a file");
-			}
-			if (!p.exists()) {
-				p.mkdirs();
-			}
-
-			File destination;
-			destination = Files.createTempDirectory(p.toPath(), ".tmp").toFile();
-			log.info("Saving temporarily to {}", destination.getAbsolutePath());
-			cubes.entrySet().stream().parallel().forEach(e -> {
-				String saveFileName = destination.getAbsolutePath() + "/" + e.getKey() + ".snappy";
-				try {
-					if (!asJson)
-						e.getValue().save(saveFileName);
-					else
-						e.getValue().saveAsJson(saveFileName, e.getKey());
-					File f = new File(saveFileName);
-					File newF = new File(p, f.getName());
-					f.renameTo(newF);
-
-				} catch (FileNotFoundException e1) {
-					log.error("File not found: {}", saveFileName);
-					log.error("error", e1);
-				} catch (IOException e1) {
-					log.error("Could not save {} in {}", e.getKey(), saveFileName);
-					e1.printStackTrace();
-				}
-			});
-			destination.delete();
-		} finally {
-			l.unlock();
-			lastSaveTsMs = System.currentTimeMillis();
+	public synchronized void save(String path, boolean asJson) throws IOException {
+		File p = new File(path);
+		if (p.exists() && p.isFile()) {
+			log.error("Attempting to save to directory");
+			throw new InvalidParameterException("Path specified is a file");
 		}
+		if (!p.exists()) {
+			p.mkdirs();
+		}
+
+		File destination;
+		destination = Files.createTempDirectory(p.toPath(), ".tmp").toFile();
+		log.info("Saving temporarily to {}", destination.getAbsolutePath());
+		cubes.entrySet().stream().parallel().forEach(e -> {
+			String saveFileName = destination.getAbsolutePath() + "/" + e.getKey() + ".snappy";
+			try {
+				if (!asJson)
+					e.getValue().save(saveFileName);
+				else
+					e.getValue().saveAsJson(saveFileName, e.getKey());
+				File f = new File(saveFileName);
+				File newF = new File(p, f.getName());
+				f.renameTo(newF);
+
+			} catch (FileNotFoundException e1) {
+				log.error("File not found: {}", saveFileName);
+				log.error("error", e1);
+			} catch (IOException e1) {
+				log.error("Could not save {} in {}", e.getKey(), saveFileName);
+				e1.printStackTrace();
+			}
+		});
+		destination.delete();
+		lastSaveTsMs = System.currentTimeMillis();
 
 	}
 
 	@Override
 	public void load(String path) {
 		long t0 = System.currentTimeMillis();
-		Lock l = lock.writeLock();
-		l.lock();
-		try {
-			File p = new File(path);
-			if (p.exists()) {
-				if (p.isFile()) {
-					log.error("Attempting to load from directory");
-					throw new InvalidParameterException("Path specified is a file");
-				}
 
-				for (File cubeFile : p.listFiles()) {
-					log.info("Loading from file {}", cubeFile.getAbsolutePath());
-					String cubeName = cubeFile.getName().replace(".gz", "").replace(".snappy", "");
-					Cube c = createNewCube(partitionColumnName);
-					try {
-						c.load(cubeFile.getAbsolutePath());
-						cubes.put(cubeName, c);
-					} catch (IOException e) {
-						log.error("Could no load cube {}", cubeName);
-					}
-
-				}
-			} else {
-				log.warn("Save path {} does not exist. It will be created next time when saving", path);
+		File p = new File(path);
+		if (p.exists()) {
+			if (p.isFile()) {
+				log.error("Attempting to load from directory");
+				throw new InvalidParameterException("Path specified is a file");
 			}
-		} finally {
-			l.unlock();
-			long t1 = System.currentTimeMillis();
-			log.info("Loading time: {}ms", t1 - t0);
+
+			for (File cubeFile : p.listFiles()) {
+				log.info("Loading from file {}", cubeFile.getAbsolutePath());
+				String cubeName = cubeFile.getName().replace(".gz", "").replace(".snappy", "");
+				Cube c = createNewCube(partitionColumnName);
+				try {
+					c.load(cubeFile.getAbsolutePath());
+					cubes.put(cubeName, c);
+				} catch (IOException e) {
+					log.error("Could no load cube {}", cubeName);
+				}
+
+			}
+		} else {
+			log.warn("Save path {} does not exist. It will be created next time when saving", path);
 		}
+		long t1 = System.currentTimeMillis();
+		log.info("Loading time: {}ms", t1 - t0);
 
 	}
 

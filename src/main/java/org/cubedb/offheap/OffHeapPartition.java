@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.Set;
@@ -21,8 +20,6 @@ import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.SearchResult;
-import org.cubedb.core.counters.CounterContainer;
-import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.core.lookups.HashMapLookup;
 import org.cubedb.core.lookups.Lookup;
 import org.cubedb.core.tiny.TinyColumn;
@@ -235,13 +232,7 @@ public class OffHeapPartition implements Partition {
 
 	@Override
 	public void insert(DataRow row) {
-		Lock l = lock.writeLock();
-		l.lock();
-		try {
-			_insert(row);
-		} finally {
-			l.unlock();
-		}
+		_insert(row);
 		lastInsertTs = System.currentTimeMillis();
 	}
 
