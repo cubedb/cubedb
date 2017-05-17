@@ -6,12 +6,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.cubedb.core.Column;
-import org.cubedb.core.ColumnDoesNotExistException;
 import org.cubedb.core.Constants;
 import org.cubedb.core.KeyMap;
 import org.cubedb.core.Metric;
@@ -19,8 +20,6 @@ import org.cubedb.core.Partition;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.SearchResult;
-import org.cubedb.core.counters.CounterContainer;
-import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.core.lookups.HashMapLookup;
 import org.cubedb.core.lookups.Lookup;
 import org.cubedb.core.tiny.TinyColumn;
@@ -57,6 +56,7 @@ public class OffHeapPartition implements Partition {
 	protected long lastAppendTs;
 	protected long startupTs;
 	protected long lastSaveTs;
+	protected final ReadWriteLock lock;
 
 	public OffHeapPartition() {
 		// log.debug("Initializing Partition");
@@ -65,6 +65,7 @@ public class OffHeapPartition implements Partition {
 		columns = new HashMap<String, Column>(5);
 		metrics = new HashMap<String, Metric>(1);
 		metricLookup = new HashMapLookup(false);
+		lock = new ReentrantReadWriteLock(false);
 
 	}
 
@@ -86,8 +87,6 @@ public class OffHeapPartition implements Partition {
 
 	protected void initializeMap() {
 		log.debug("Re-Initializing map");
-		long t0 = System.currentTimeMillis();
-
 		final Column[] fields = new Column[fieldLookup.getKeys().length];
 		for (int i = 0; i < fields.length; i++) {
 			String fieldKey = fieldLookup.getKey(i);
@@ -196,7 +195,6 @@ public class OffHeapPartition implements Partition {
 			for (String f : newFields) {
 				final int newColumnIndex = fieldLookup.getValue(f);
 				lookups.put(f, new HashMapLookup());
-				// log.debug("Index for {} is {}", f, newColumnIndex);
 				columns.put(f, new TinyColumn(size));
 			}
 			_insert(row);
@@ -233,7 +231,7 @@ public class OffHeapPartition implements Partition {
 	}
 
 	@Override
-	public synchronized void insert(DataRow row) {
+	public void insert(DataRow row) {
 		_insert(row);
 		lastInsertTs = System.currentTimeMillis();
 	}
@@ -262,10 +260,8 @@ public class OffHeapPartition implements Partition {
 		for (Entry<String, Set<String>> e : filtersByColumn.entrySet()) {
 			String fieldName = e.getKey();
 			Lookup valueIdLookup = lookups.get(fieldName);
-			int[] valueIdList = e.getValue()
-				.stream()
-				.mapToInt(fieldValue -> valueIdLookup.getValue(fieldValue))
-				.toArray();
+			int[] valueIdList = e.getValue().stream().mapToInt(fieldValue -> valueIdLookup.getValue(fieldValue))
+					.toArray();
 			if (valueIdList.length > 0) {
 				fieldNameToMatchers.put(fieldName, new IdMatcher(valueIdList));
 			}
@@ -304,14 +300,16 @@ public class OffHeapPartition implements Partition {
 		}
 
 		/*
-		 * If filters require non-existing columns we can skip the search altogether.
+		 * If filters require non-existing columns we can skip the search
+		 * altogether.
 		 */
 		if (!checkAllFilterColumnsExist(filters)) {
 			return SearchResult.buildEmpty(metrics.keySet());
 		}
 
 		final int groupFieldId;
-		// field names -> (column value id -> (group value id -> (metric index -> counter)))
+		// field names -> (column value id -> (group value id -> (metric index
+		// -> counter)))
 		final CounterContainer sideCounterCountainer = new CounterContainer(fieldLookup, metricLookup, lookups);
 
 		/*
@@ -367,9 +365,9 @@ public class OffHeapPartition implements Partition {
 		final Metric[] metricsArray = new Metric[metricLookup.size()];
 
 		/*
-		 * Filters are specification of criterias using strings. Here they
-		 * are transformed to an efficient representation, functions that
-		 * match using integer ids
+		 * Filters are specification of criterias using strings. Here they are
+		 * transformed to an efficient representation, functions that match
+		 * using integer ids
 		 */
 		final Map<String, IdMatcher> matchers = transformFiltersToMatchers(filters);
 
@@ -388,16 +386,16 @@ public class OffHeapPartition implements Partition {
 		}
 
 		/*
-		 * Here starts the brute-force scanning. Operations in this block
-		 * have to be as fast as possible
+		 * Here starts the brute-force scanning. Operations in this block have
+		 * to be as fast as possible
 		 */
 
 		final int fieldLookupSize = fieldLookup.size();
 		t2 = System.nanoTime();
 		for (int i = 0; i < curSize; i++) {
 			/*
-			 * Here we do not retrieve values of all columns. We only get
-			 * those which are related to a filter/matcher
+			 * Here we do not retrieve values of all columns. We only get those
+			 * which are related to a filter/matcher
 			 */
 			for (int matcherId = 0; matcherId < matchersArray.length; matcherId++) {
 				IdMatcher matcher = matchersArray[matcherId];
@@ -415,8 +413,8 @@ public class OffHeapPartition implements Partition {
 			if (atLeastOneMatch(columnMatches)) {
 				matchCount++;
 				/*
-				 * We have a match! First, we retrieve the counters values
-				 * for this row
+				 * We have a match! First, we retrieve the counters values for
+				 * this row
 				 */
 				for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
 					final long c = metricsArray[mIndex].get(i);
@@ -426,7 +424,7 @@ public class OffHeapPartition implements Partition {
 				/*
 				 * Find out the value of the field to group by for the i-th row.
 				 */
-				final int groupFieldValueId = doFieldGrouping ? columns[groupFieldId].get(i): FAKE_GROUP_VALUE_ID;
+				final int groupFieldValueId = doFieldGrouping ? columns[groupFieldId].get(i) : FAKE_GROUP_VALUE_ID;
 
 				/*
 				 * Then, check if all columns of a row match. Increase the
@@ -439,15 +437,14 @@ public class OffHeapPartition implements Partition {
 				}
 
 				/*
-				 * Last, retrieve the values of all columns. For each side,
-				 * we increment the side counter, but only when *other* side
+				 * Last, retrieve the values of all columns. For each side, we
+				 * increment the side counter, but only when *other* side
 				 * filters match.
 				 */
 				for (int fieldId = 0; fieldId < fieldLookupSize; fieldId++) {
 					/*
-					 * We don't care if the current side filter is applied
-					 * or not - it should only influence *other* side
-					 * filtering.
+					 * We don't care if the current side filter is applied or
+					 * not - it should only influence *other* side filtering.
 					 */
 					if (!checkOtherMatch(columnMatches, fieldId)) {
 						continue;
@@ -455,7 +452,8 @@ public class OffHeapPartition implements Partition {
 
 					final int columnValueId = columnValues[fieldId];
 					for (int mIndex = 0; mIndex < metricNames.length; mIndex++) {
-						sideCounterCountainer.add(fieldId, columnValueId, groupFieldValueId, mIndex, metricValues[mIndex]);
+						sideCounterCountainer.add(fieldId, columnValueId, groupFieldValueId, mIndex,
+								metricValues[mIndex]);
 					}
 				}
 			}
@@ -463,19 +461,15 @@ public class OffHeapPartition implements Partition {
 		t3 = System.nanoTime();
 
 		final long t_pre_build = System.nanoTime();
-		final SearchResult result = SearchResult.buildFromResultArray(
-			sideCounterCountainer, totalCounters,
-			doFieldGrouping, groupFieldName,
-			lookups, fieldLookup, metricLookup
-		);
+		final SearchResult result = SearchResult.buildFromResultArray(sideCounterCountainer, totalCounters,
+				doFieldGrouping, groupFieldName, lookups, fieldLookup, metricLookup);
 		final long t1 = System.nanoTime();
 		log.debug("Building result from array took {}ms", (t1 - t_pre_build) / 1000000.0);
 		log.debug("Got {} matches for the query in {}ms among {} rows", matchCount, (t1 - t0) / 1000000.0, curSize);
 		if (curSize > 0 && (t3 - t2) > 0) {
 			int rowsPerSecond = (int) (1000000000l * curSize / (t3 - t2));
-			 log.debug("Bruteforce search itself took {} ms", (t3 - t2) /
-			 1000000.0);
-			 log.debug("Bruteforce search is {} rows/second", rowsPerSecond);
+			log.debug("Bruteforce search itself took {} ms", (t3 - t2) / 1000000.0);
+			log.debug("Bruteforce search is {} rows/second", rowsPerSecond);
 		}
 		return result;
 
@@ -535,7 +529,7 @@ public class OffHeapPartition implements Partition {
 		long metricSize = metrics.values().stream().mapToLong(Metric::size).sum();
 		int columnBlocks = columns.values().stream().mapToInt(Column::getNumBuffers).sum();
 		int metricBLocks = metrics.values().stream().mapToInt(Metric::getNumBuffers).sum();
-		long lookupSize = (long) (map!=null?map.size():0l) * columns.size() * Short.BYTES;
+		long lookupSize = (long) (map != null ? map.size() : 0l) * columns.size() * Short.BYTES;
 		Map<String, Object> stats = new HashMap<String, Object>();
 		stats.put(Constants.STATS_COLUMN_SIZE, columnSize);
 		stats.put(Constants.STATS_METRIC_SIZE, metricSize);
@@ -546,9 +540,8 @@ public class OffHeapPartition implements Partition {
 		stats.put(Constants.STATS_LAST_RECORD_APPEND, lastAppendTs);
 		stats.put(Constants.STATS_NUM_RECORDS, size);
 		stats.put(Constants.STATS_NUM_COLUMNS, columns.size());
-		stats.put(Constants.STATS_NUM_LARGE_BLOCKS,
-				metrics.values().stream().mapToInt(e -> e.isTiny() ? 0 : 1).sum()
-						+ columns.values().stream().mapToInt(e -> e.isTiny() ? 0 : 1).sum());
+		stats.put(Constants.STATS_NUM_LARGE_BLOCKS, metrics.values().stream().mapToInt(e -> e.isTiny() ? 0 : 1).sum()
+				+ columns.values().stream().mapToInt(e -> e.isTiny() ? 0 : 1).sum());
 		stats.put(Constants.STATS_IS_READONLY_PARTITION, map == null);
 		// stats.put(Constants.STATS_LAST_SAVE, lastInsertTs);
 		lookups.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().size()));
@@ -612,7 +605,7 @@ public class OffHeapPartition implements Partition {
 
 	@Override
 	public Stream<DataRow> asDataRowStream() {
-		if(map==null)
+		if (map == null)
 			initializeMap();
 		return map.entrySet().map(e -> {
 			DataRow r = new DataRow();

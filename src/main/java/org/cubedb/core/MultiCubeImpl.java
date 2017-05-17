@@ -46,6 +46,7 @@ public class MultiCubeImpl implements MultiCube {
 			final List<DataRow> cubeData = cubeEntry.getValue();
 			cubes.computeIfAbsent(cubeName, this::createNewCube).insert(cubeData);
 		}
+
 	}
 
 	@Override
@@ -100,52 +101,38 @@ public class MultiCubeImpl implements MultiCube {
 		if (!p.exists()) {
 			p.mkdirs();
 		}
-		if (isCurrentlySavingOrLoading) {
-			log.warn("Process of saving or loading is currently in progress. This really shouldnt happen");
-		}
-		isCurrentlySavingOrLoading = true;
-		File destination;
-		try {
-			destination = Files.createTempDirectory(p.toPath(), ".tmp").toFile();
-			log.info("Saving temporarily to {}", destination.getAbsolutePath());
-			for (Entry<String, Cube> e : cubes.entrySet()) {
-				String saveFileName = destination.getAbsolutePath() + "/" + e.getKey() + ".snappy";
-				try {
-					if (!asJson)
-						e.getValue().save(saveFileName);
-					else
-						e.getValue().saveAsJson(saveFileName, e.getKey());
-					File f = new File(saveFileName);
-					File newF = new File(p, f.getName());
-					f.renameTo(newF);
 
-				} catch (FileNotFoundException e1) {
-					log.error("File not found: {}", saveFileName);
-					log.error("error", e1);
-				} catch (IOException e1) {
-					log.error("Could not save {} in {}", e.getKey(), saveFileName);
-					e1.printStackTrace();
-				}
+		File destination;
+		destination = Files.createTempDirectory(p.toPath(), ".tmp").toFile();
+		log.info("Saving temporarily to {}", destination.getAbsolutePath());
+		cubes.entrySet().stream().parallel().forEach(e -> {
+			String saveFileName = destination.getAbsolutePath() + "/" + e.getKey() + ".snappy";
+			try {
+				if (!asJson)
+					e.getValue().save(saveFileName);
+				else
+					e.getValue().saveAsJson(saveFileName, e.getKey());
+				File f = new File(saveFileName);
+				File newF = new File(p, f.getName());
+				f.renameTo(newF);
+
+			} catch (FileNotFoundException e1) {
+				log.error("File not found: {}", saveFileName);
+				log.error("error", e1);
+			} catch (IOException e1) {
+				log.error("Could not save {} in {}", e.getKey(), saveFileName);
+				e1.printStackTrace();
 			}
-			destination.delete();
-		} catch (IOException e2) {
-			// TODO Auto-generated catch block
-			log.error("Exception when saving the cube", e2);
-		}
-		// Close the file
+		});
+		destination.delete();
 		lastSaveTsMs = System.currentTimeMillis();
-		isCurrentlySavingOrLoading = false;
+
 	}
 
 	@Override
-	public synchronized void load(String path) {
+	public void load(String path) {
 		long t0 = System.currentTimeMillis();
 
-		if (isCurrentlySavingOrLoading) {
-			log.warn("Process of saving or loading is currently in progress.");
-			return;
-		}
-		isCurrentlySavingOrLoading = true;
 		File p = new File(path);
 		if (p.exists()) {
 			if (p.isFile()) {
@@ -168,24 +155,10 @@ public class MultiCubeImpl implements MultiCube {
 		} else {
 			log.warn("Save path {} does not exist. It will be created next time when saving", path);
 		}
-		isCurrentlySavingOrLoading = false;
 		long t1 = System.currentTimeMillis();
 		log.info("Loading time: {}ms", t1 - t0);
-	}
 
-	/*
-	 * public void loadParallel(File p) { this.cubes =
-	 * Arrays.stream(p.listFiles()).parallel().map(cubeFile -> { log.info(
-	 * "Loading from file {}", cubeFile.getAbsolutePath()); String cubeName =
-	 * cubeFile.getName().replace(".gz", ""); Cube c =
-	 * createNewCube(partitionColumnName); try {
-	 * c.load(cubeFile.getAbsolutePath()); } catch (IOException e) { cubeName =
-	 * null; log.error("Could no load cube {}", cubeName); } return new
-	 * Pair<String, Cube>(cubeName, c); }).filter(e -> e.getKey() !=
-	 * null).collect(Collectors.toMap(Pair::getKey, Pair::getValue));
-	 * 
-	 * }
-	 */
+	}
 
 	@Override
 	public int deleteCube(String cubeName, String fromPartition, String toPartition) {

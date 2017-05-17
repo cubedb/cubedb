@@ -1,6 +1,5 @@
 package org.cubedb.utils;
 
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -43,7 +42,8 @@ public class CubeUtils {
 	public static <T> List<List<T>> partitionList(final List<T> in) {
 		final int numProcs = Runtime.getRuntime().availableProcessors();
 		final List<List<T>> out = partitionList(in, numProcs);
-		//log.debug("Having {} available processors, split list into {} parts", numProcs, out.size());
+		// log.debug("Having {} available processors, split list into {} parts",
+		// numProcs, out.size());
 
 		return out;
 	}
@@ -57,64 +57,43 @@ public class CubeUtils {
 		return new short[0];
 	}
 
-	public static Map<String, Map<String, Map<String, Long>>>
-		searchResultsToMap(Map<GroupedSearchResultRow, Long> in) {
-		return in
-			.entrySet()
-			.stream()
-			.collect(
-				Collectors.groupingBy(
-					e -> e.getKey().getFieldName(),
-					Collectors.groupingBy(
-						e-> e.getKey().getFieldValue(),
-						Collectors.groupingBy(
-							e->e.getKey().getMetricName(),
-							Collectors.summingLong(e -> e.getValue().longValue())
-						)
-					)
-				)
-			);
-	}
-
-	public static Map<String, Map<String, Map<String, Map<String, Long>>>>
-		searchResultsToGroupedMap(Map<GroupedSearchResultRow, Long> in) {
-		return in
-			.entrySet()
-			.stream()
-			.collect(
-				Collectors.groupingBy(
-					e -> e.getKey().getFieldName(),
-					Collectors.groupingBy(
-						e-> e.getKey().getFieldValue(),
-						Collectors.groupingBy(
-								e-> e.getKey().getGroupFieldValue(),
-								Collectors.groupingBy(
-									e-> e.getKey().getMetricName(),
-									Collectors.summingLong(e -> e.getValue().longValue())
-								)
-							)
-						)
-				)
-			);
-	}
-
-	public static Map<String, String[]> multiValuedMapToMap(MultivaluedMap<String, String> in ){
+	public static Map<String, Map<String, Map<String, Long>>> searchResultsToMap(Map<GroupedSearchResultRow, Long> in) {
 		return in.entrySet().stream()
-		.collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().toArray(new String[0])));
+				.collect(Collectors.groupingBy(e -> e.getKey().getFieldName(),
+						Collectors.groupingBy(e -> e.getKey().getFieldValue(),
+								Collectors.groupingBy(e -> e.getKey().getMetricName(),
+										Collectors.summingLong(e -> e.getValue().longValue())))));
 	}
 
-	public static Kryo getKryoWithRegistrations(){
-		//int ref = 0;
+	public static Map<String, Map<String, Map<String, Map<String, Long>>>> searchResultsToGroupedMap(
+			Map<GroupedSearchResultRow, Long> in) {
+		return in.entrySet().stream()
+				.collect(Collectors.groupingBy(e -> e.getKey().getFieldName(),
+						Collectors.groupingBy(e -> e.getKey().getFieldValue(),
+								Collectors.groupingBy(e -> e.getKey().getGroupFieldValue(),
+										Collectors.groupingBy(e -> e.getKey().getMetricName(),
+												Collectors.summingLong(e -> e.getValue().longValue()))))));
+	}
+
+	public static Map<String, String[]> multiValuedMapToMap(MultivaluedMap<String, String> in) {
+		return in.entrySet().stream()
+				.collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().toArray(new String[0])));
+	}
+
+	public static Kryo getKryoWithRegistrations() {
+		// int ref = 0;
 		Kryo kryo = new Kryo();
 		kryo.setRegistrationRequired(false);
-		/*kryo.register(MultiCubeImpl.class, ref++);
-		kryo.register(HashMapLookup.class, ref++);
-		kryo.register(OffHeapPartition.class, ref++);
-		kryo.register(OffHeapColumn.class, ref++);
-		kryo.register(OffHeapMetric.class, ref++);
-		kryo.register(MultiBuffer.class, ref++);
-		kryo.register(TinyColumn.class, ref++);
-		kryo.register(TinyMetric.class, ref++); */
+		/*
+		 * kryo.register(MultiCubeImpl.class, ref++);
+		 * kryo.register(HashMapLookup.class, ref++);
+		 * kryo.register(OffHeapPartition.class, ref++);
+		 * kryo.register(OffHeapColumn.class, ref++);
+		 * kryo.register(OffHeapMetric.class, ref++);
+		 * kryo.register(MultiBuffer.class, ref++);
+		 * kryo.register(TinyColumn.class, ref++);
+		 * kryo.register(TinyMetric.class, ref++);
+		 */
 		return kryo;
 	}
 }
