@@ -254,10 +254,16 @@ public class OffHeapPartition implements Partition {
 		for (String columnName : columns.keySet()) {
 			filtersByColumn.put(columnName, new HashSet<String>());
 		}
+
+		// For every filtered column pick extract possible column value
 		for (Filter filter : filters) {
-			for (String v : filter.getValues())
-				filtersByColumn.get(filter.getField()).add(v);
+			Set<String> columnValues = filtersByColumn.get(filter.getField());
+			for (String v : filter.getValues()) {
+				columnValues.add(v);
+			}
 		}
+
+		// Convert possible column values to id-based column value matchers
 		for (Entry<String, Set<String>> e : filtersByColumn.entrySet()) {
 			String fieldName = e.getKey();
 			Lookup valueIdLookup = lookups.get(fieldName);
@@ -303,7 +309,13 @@ public class OffHeapPartition implements Partition {
 		/*
 		 * If filters require non-existing columns we can skip the search
 		 * altogether.
+		 *
+		 * NOTE: also removing null value filters for non-existant columns as a non-existant column
+		 * is considered to have a null value.
 		 */
+		filters = filters.stream()
+			.filter(f -> columns.containsKey(f.getField()) || !f.isNullValueFilter())
+			.collect(Collectors.toList());
 		if (!checkAllFilterColumnsExist(filters)) {
 			return SearchResult.buildEmpty(metrics.keySet());
 		}
@@ -478,14 +490,9 @@ public class OffHeapPartition implements Partition {
 
 	private boolean checkAllFilterColumnsExist(List<Filter> filters) {
 		for (Filter filter : filters) {
-			String fieldName = filter.getField();
-			if (columns.containsKey(fieldName)) {
-				continue;
+			if (!columns.containsKey(filter.getField())) {
+				return false;
 			}
-			if (filter.isNullValueFilter()) {
-				continue;
-			}
-			return false;
 		}
 		return true;
 	}
