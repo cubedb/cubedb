@@ -82,13 +82,13 @@ public class CubeResource {
 		log.debug("Grouping took {}ms"+(t_after_grouping - t_before_grouping));
 		return new APIResponse<Map<String, Map<String, Map<String, Map<String, Long>>>>>(
 			groups, info, startTime);
-		
+
 	}
 
 	private List<Filter> buildFilters(MultivaluedMap<String, String> filterCriterias) {
 		List<Filter> filters = new ArrayList<Filter>();
 		for (Entry<String, List<String>> filterE : filterCriterias.entrySet()) {
-			String[] values = (String[]) filterE.getValue().toArray(new String[0]);
+			String[] values = filterE.getValue().toArray(new String[0]);
 			Filter f = new Filter();
 			f.setField(filterE.getKey());
 			f.setValues(values);

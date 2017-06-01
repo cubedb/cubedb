@@ -6,9 +6,9 @@ public class Constants {
 	public static int MAX_DIMENSIONS_SIZE = 256;
 	public static int INITIAL_PARTITION_SIZE = 4096; //aka buffer size
 	public static final int START_TINY_SIZE = 256;
-	public static String NULL_VALUE="null";
-	
-	
+	public static String NULL_VALUE = "null";
+
+
 	// Stats name constants
 	public static final String STATS_COLUMN_SIZE = "columnSizeBytes";
 	public static final String STATS_METRIC_SIZE = "metricSizeBytes";
@@ -29,5 +29,5 @@ public class Constants {
 	public static final String STATS_NUM_READONLY_PARTITIONS = "numReadOnlyPartitions";
 	public static long KEY_MAP_TTL = 1 * 24 * 3600 * 1000; // 1 day, milliseconds. Please note it is not final.
 	public static final boolean sendStats = true;
-	
+
 }
