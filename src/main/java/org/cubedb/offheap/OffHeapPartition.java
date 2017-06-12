@@ -26,6 +26,7 @@ import org.cubedb.core.lookups.Lookup;
 import org.cubedb.core.tiny.TinyColumn;
 import org.cubedb.core.tiny.TinyMetric;
 import org.cubedb.core.tiny.TinyUtils;
+import org.cubedb.offheap.map.OffHeapMap;
 import org.cubedb.offheap.matchers.IdMatcher;
 import org.cubedb.utils.CubeUtils;
 import org.slf4j.Logger;
@@ -82,8 +83,7 @@ public class OffHeapPartition implements Partition {
 	}
 
 	protected void createMap(int fieldsLength) {
-		// map = new MapDBKeyMap(size, fieldsLength);
-		map = new BOHKeyMap(size, fieldsLength);
+		map = new OffHeapMap(size);
 	}
 
 	protected void initializeMap() {

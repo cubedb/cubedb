@@ -122,7 +122,6 @@ public class CubeResourceGeneralTest {
 	public void testInsertCacheExpireAndStats() throws InterruptedException {
 		//Response r = null;
 		Constants.KEY_MAP_TTL = 50;
-		Genson builder = new GensonBuilder().useIndentation(true).create();
 		int numFields = 2;
 		int numValues = 3;
 		int numPartitions = 5;
