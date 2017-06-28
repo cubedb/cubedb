@@ -19,6 +19,7 @@ import com.jsoniter.output.JsonStream;
 import com.jsoniter.spi.Config;
 import com.jsoniter.spi.DecodingMode;
 import com.jsoniter.spi.TypeLiteral;
+import org.cubedb.api.ext.JsonIteratorConverter;
 import org.cubedb.api.resources.CubeResource;
 import org.cubedb.api.utils.APIResponse;
 import org.cubedb.core.Constants;
@@ -50,6 +51,7 @@ public class CubeResourceGeneralTest {
 	    ResourceConfig rc = new ResourceConfig();
 	    cube = new MultiCubeImpl(null);
 	    rc.registerInstances(new CubeResource(cube));
+		rc.register(JsonIteratorConverter.class);
 
 	    //create the Grizzly server instance
 	    httpServer = GrizzlyHttpServerFactory.createHttpServer(baseUri, rc);
@@ -58,6 +60,7 @@ public class CubeResourceGeneralTest {
 
 	    //configure client with the base URI path
 	    Client client = ClientBuilder.newClient();
+		client.register(JsonIteratorConverter.class);
 	    webTarget = client.target(baseUri);
 	}
 

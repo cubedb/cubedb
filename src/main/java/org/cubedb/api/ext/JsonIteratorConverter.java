@@ -3,7 +3,7 @@ package org.cubedb.api.ext;
 import com.jsoniter.JsonIterator;
 import com.jsoniter.output.JsonStream;
 import com.jsoniter.spi.Config;
-import com.jsoniter.spi.TypeLiteral;
+import org.apache.commons.io.IOUtils;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
@@ -17,6 +17,7 @@ import javax.ws.rs.ext.Provider;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.StringWriter;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 
@@ -34,8 +35,12 @@ public class JsonIteratorConverter implements MessageBodyReader<Object>, Message
 
     @Override
     public Object readFrom(Class<Object> aClass, Type type, Annotation[] annotations, MediaType mediaType, MultivaluedMap<String, String> multivaluedMap, InputStream inputStream) throws IOException, WebApplicationException {
-        JsonIterator smth = JsonIterator.parse(inputStream, 2048);
-        Object retval = smth.read();
+        StringWriter writer = new StringWriter();
+        IOUtils.copy(inputStream, writer);
+        String theString = writer.toString();
+
+        JsonIterator smth = JsonIterator.parse(theString);
+        Object retval = smth.read(type);
         return retval;
     }
 

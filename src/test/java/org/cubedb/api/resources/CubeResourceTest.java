@@ -89,6 +89,7 @@ public class CubeResourceTest {
 
 		// configure client with the base URI path
 		Client client = ClientBuilder.newClient();
+		client.register(JsonIteratorConverter.class);
 		webTarget = client.target(baseUri);
 	}
 
