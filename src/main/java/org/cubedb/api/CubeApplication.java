@@ -5,6 +5,7 @@ import java.net.URI;
 
 import javax.ws.rs.core.UriBuilder;
 
+import org.cubedb.api.ext.JsonIteratorConverter;
 import org.cubedb.api.filters.AccessOriginFilter;
 import org.cubedb.api.filters.GenericExceptionMapper;
 import org.cubedb.api.resources.CubeResource;
@@ -48,6 +49,7 @@ public class CubeApplication extends ResourceConfig {
 		rConfig.register(GenericExceptionMapper.class);
 		rConfig.register(org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpContainerProvider.class);
 		EncodingFilter.enableFor(rConfig, GZipEncoder.class);
+		rConfig.register(JsonIteratorConverter.class);
 
 	}
 

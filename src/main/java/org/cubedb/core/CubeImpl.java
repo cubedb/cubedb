@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import com.jsoniter.output.JsonStream;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.Pair;
@@ -37,7 +38,6 @@ import org.xerial.snappy.SnappyOutputStream;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-import com.owlike.genson.Genson;
 
 public class CubeImpl implements Cube {
 	public static final Logger log = LoggerFactory.getLogger(CubeImpl.class);
@@ -325,13 +325,12 @@ public class CubeImpl implements Cube {
 
 	@Override
 	public void saveAsJson(String saveFileName, String cubeName) {
-		Genson g = new Genson();
 		try {
 			PrintStream p = new PrintStream(
 					new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(saveFileName))));
 			partitions.entrySet().stream()
 					.flatMap((e) -> e.getValue().asDataRowStream().peek((row) -> row.setPartition(e.getKey())))
-					.peek((row) -> row.setCubeName(cubeName)).map((row) -> g.serialize(row))
+					.peek((row) -> row.setCubeName(cubeName)).map((row) -> JsonStream.serialize(row))
 					.forEach((rowString) -> p.println(rowString));
 			p.close();
 		} catch (IOException e) {
