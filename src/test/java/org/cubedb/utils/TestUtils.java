@@ -23,6 +23,8 @@ import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import com.jsoniter.JsonIterator;
+import com.jsoniter.spi.TypeLiteral;
 import org.apache.commons.io.IOUtils;
 import org.cubedb.core.Cube;
 import org.cubedb.core.Partition;
@@ -36,8 +38,6 @@ import org.slf4j.LoggerFactory;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Output;
-import com.owlike.genson.GenericType;
-import com.owlike.genson.Genson;
 
 public class TestUtils {
 
@@ -222,17 +222,17 @@ public class TestUtils {
 	public static List<DataRow> readFromJsonFile(String gzipFile) throws FileNotFoundException, IOException{
 		GZIPInputStream source = new GZIPInputStream(new FileInputStream(new File(gzipFile)));
 		String content = IOUtils.toString(source);
-		return new Genson().deserialize(content, new GenericType<List<DataRow>>(){});
+		return JsonIterator.deserialize(content, new TypeLiteral<List<DataRow>>(){});
 	}
 
 	public static List<DataRow> readFromJsonFileLineByLine(String gzipFile) throws FileNotFoundException, IOException{
 		GZIPInputStream source = new GZIPInputStream(new FileInputStream(new File(gzipFile)));
 		String content = IOUtils.toString(source);
 		List<DataRow> out = new ArrayList<DataRow>();
-		Genson g = new Genson();
-		GenericType<DataRow> t = new GenericType<DataRow>(){};
+		TypeLiteral<DataRow> t = new TypeLiteral<DataRow>(){};
+
 		for(String line : content.split("\n"))
-			out.add(g.deserialize(line, t));
+			out.add(JsonIterator.deserialize(line, t));
 
 		return out;
 	}

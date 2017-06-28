@@ -10,10 +10,14 @@ import java.util.Map;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import com.jsoniter.JsonIterator;
+import com.jsoniter.spi.TypeLiteral;
+import org.cubedb.api.ext.JsonIteratorConverter;
 import org.cubedb.api.resources.CubeResource;
 import org.cubedb.api.utils.APIResponse;
 import org.cubedb.core.MultiCube;
@@ -32,8 +36,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.owlike.genson.GenericType;
-import com.owlike.genson.Genson;
 
 public class CubeResourceTest {
 	private HttpServer httpServer;
@@ -78,6 +80,7 @@ public class CubeResourceTest {
 		ResourceConfig rc = new ResourceConfig();
 		MultiCube cube = new MultiCubeTest(null);
 		rc.registerInstances(new CubeResource(cube));
+		rc.register(JsonIteratorConverter.class);
 
 		// create the Grizzly server instance
 		httpServer = GrizzlyHttpServerFactory.createHttpServer(baseUri, rc);
@@ -96,9 +99,12 @@ public class CubeResourceTest {
 
 	@Test
 	public void testGet() {
+		Invocation.Builder smth = webTarget.path("v1/cubeName/last/120").queryParam("h", "1").request();
+		Response resp = smth.get();
+		System.out.println(resp);
 		String response = webTarget.path("v1/cubeName/last/120").queryParam("h", "1").request().get(String.class);// .get();
-		APIResponse<Map<String, Map<String, Map<String, Long>>>> out = new Genson().deserialize(response,
-				new GenericType<APIResponse<Map<String, Map<String, Map<String, Long>>>>>() {
+		APIResponse<Map<String, Map<String, Map<String, Long>>>> out = JsonIterator.deserialize(response,
+				new TypeLiteral<APIResponse<Map<String,Map<String,Map<String,Long>>>>>() {
 				});
 		assertTrue(out.response.size() == 1);
 	}
@@ -106,9 +112,9 @@ public class CubeResourceTest {
 	@Test
 	public void testGetGrouped() {
 		String response = webTarget.path("v1/cubeName/last/120/group_by/field_name").request().get(String.class);
-		APIResponse<Map<String, Map<String, Map<String, Map<String, Long>>>>> out = new Genson()
+		APIResponse<Map<String, Map<String, Map<String, Map<String, Long>>>>> out = JsonIterator
 				.deserialize(response,
-						new GenericType<APIResponse<Map<String, Map<String, Map<String, Map<String, Long>>>>>>() {
+						new TypeLiteral<APIResponse<Map<String,Map<String,Map<String,Map<String,Long>>>>>>() {
 						});
 		assertTrue(out.response.size() == 1);
 	}
@@ -125,8 +131,9 @@ public class CubeResourceTest {
 		Entity<List<DataRow>> entity = Entity.entity(data, MediaType.APPLICATION_JSON_TYPE);
 		String r = webTarget.path("v1/insert").request().post(entity, String.class);
 
-		APIResponse<Map<String, Integer>> out = new Genson().deserialize(r,
-				new GenericType<APIResponse<Map<String, Integer>>>() {
+		APIResponse<Map<String, Integer>> out = JsonIterator.deserialize(r,
+				new TypeLiteral<APIResponse<Map<String,Integer>>>() {
 				});
 	}
+
 }

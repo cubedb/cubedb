@@ -169,7 +169,7 @@ public class CubeImplTest {
 	}
 
 	@Test
-	public void testSerDe() throws FileNotFoundException, IOException {
+	public void testSerDe() throws IOException {
 		int numFields = 8;
 		int numValues = 3;
 		int numPartitions = 60;
@@ -202,7 +202,7 @@ public class CubeImplTest {
 	}
 
 	@Test
-	public void testSerDe2() throws FileNotFoundException, IOException {
+	public void testSerDe2() throws IOException {
 		Cube cube = new CubeImpl("ts");
 		List<DataRow> data = TestUtils.readFromJsonFile("src/test/resources/dumps/faulty.json.gz");
 		cube.insert(data);
@@ -214,7 +214,7 @@ public class CubeImplTest {
 	}
 
 	@Test
-	public void testSerDeJson() throws FileNotFoundException, IOException {
+	public void testSerDeJson() throws IOException {
 		Cube cube = new CubeImpl("ts");
 		List<DataRow> inData = TestUtils.readFromJsonFile("src/test/resources/dumps/faulty.json.gz");
 		cube.insert(inData);
@@ -229,7 +229,7 @@ public class CubeImplTest {
 	}
 
 	@Test
-	public void testJsonSerDe2() throws FileNotFoundException, IOException {
+	public void testJsonSerDe2() throws IOException {
 		int numFields = 6;
 		int numValues = 4;
 		int numPartitions = 3;
@@ -254,12 +254,11 @@ public class CubeImplTest {
 		TestUtils.testGroupings(inData, outData, DataRow::getCounters);
 		TestUtils.testGroupings(inData, outData, DataRow::getFields);
 		TestUtils.testGroupings(inData, outData, DataRow::getCubeName);
-		// dstF.deleteOnExit();
-		// cube.in
+		dstF.deleteOnExit();
 	}
 
 	@Test
-	public void counterConsistencyTest() throws FileNotFoundException, IOException {
+	public void counterConsistencyTest() throws IOException {
 		CubeImpl cube = new CubeImpl("p");
 		cube.insert(TestUtils.genDataRowList("p_1000", "f1", "v1", "old_field", "not_null"));
 		TestUtils.ensureSidesAddUp(cube.get("p_1000", "p_1000", new ArrayList<Filter>(), null));
@@ -271,7 +270,7 @@ public class CubeImplTest {
 
 	// TODO: this is a testcase that highlights a known bug. Once fixed, this unit test will pass
 	//@Test
-	public void counterConsistencyTestLarge() throws FileNotFoundException, IOException {
+	public void counterConsistencyTestLarge() throws IOException {
 		int numColumns = 1;
 		int numValues = 2;
 		int numPartitions = 3;
@@ -279,8 +278,6 @@ public class CubeImplTest {
 		for (int i = 0; i < numPartitions; i++) {
 			List<DataRow> data = TestUtils.genMultiColumnData("f", numColumns + numPartitions, numValues);
 
-			// List<DataRow> data = TestUtils.genSimpleData("f0", "c",
-			// numRecords);
 			String partition = "p_" + (1000 + i);
 			for (DataRow d : data) {
 				d.setPartition(partition);

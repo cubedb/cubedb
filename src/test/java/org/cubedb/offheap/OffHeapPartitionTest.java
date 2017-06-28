@@ -406,7 +406,7 @@ public class OffHeapPartitionTest {
 	}
 
 	@Test
-	public void serDeTest() throws FileNotFoundException, IOException {
+	public void serDeTest() throws IOException {
 		Kryo kryo = new Kryo();
 		File destination = File.createTempFile("partition_", ".gz");
 		Output output = new Output(new GZIPOutputStream(new FileOutputStream(destination)));
@@ -438,7 +438,7 @@ public class OffHeapPartitionTest {
 	}
 
 	@Test
-	public void faultySerDeTest() throws FileNotFoundException, IOException {
+	public void faultySerDeTest() throws IOException {
 		List<DataRow> in = TestUtils.readFromJsonFile("src/test/resources/dumps/faulty.json.gz");
 		Partition p = createPartition();
 		for (DataRow r : in) {
@@ -456,10 +456,10 @@ public class OffHeapPartitionTest {
 	}
 
 	@Test
-	public void counterConsistencyTest() throws FileNotFoundException, IOException {
+	public void counterConsistencyTest() throws IOException {
 		Partition p = createPartition();
 		p.insert(TestUtils.genDataRow("f1", "v1"));
-		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
+		TestUtils.ensureSidesAddUp(p.get(new ArrayList<>(), null).getResults());
 		p.insert(TestUtils.genDataRow("f1", "v1", "f2", "v1"));
 		TestUtils.ensureSidesAddUp(p.get(new ArrayList<Filter>(), null).getResults());
 		p.insert(TestUtils.genDataRow("f1", "v1"));
@@ -473,7 +473,7 @@ public class OffHeapPartitionTest {
 	}
 
 	@Test
-	public void counterConsistencyTestLarge() throws FileNotFoundException, IOException {
+	public void counterConsistencyTestLarge() throws IOException {
 		int numColumns = 5;
 		int numValues = 6;
 		Partition p = createPartition();
