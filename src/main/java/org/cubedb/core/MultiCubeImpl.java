@@ -62,7 +62,7 @@ public class MultiCubeImpl implements MultiCube {
 		if (c != null) {
 			return c.get(fromPartition, toPartition, filters, groupBy);
 		} else {
-			return new HashMap<GroupedSearchResultRow, Long>();
+			return new HashMap<>();
 		}
 
 	}
@@ -83,7 +83,7 @@ public class MultiCubeImpl implements MultiCube {
 		if (c != null) {
 			return c.get(lastNum, filters, groupBy);
 		} else {
-			return new HashMap<GroupedSearchResultRow, Long>();
+			return new HashMap<>();
 		}
 	}
 

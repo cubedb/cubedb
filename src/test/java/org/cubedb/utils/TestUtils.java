@@ -219,16 +219,16 @@ public class TestUtils {
 		return t1 - t0;
 	}
 
-	public static List<DataRow> readFromJsonFile(String gzipFile) throws FileNotFoundException, IOException{
+	public static List<DataRow> readFromJsonFile(String gzipFile) throws IOException{
 		GZIPInputStream source = new GZIPInputStream(new FileInputStream(new File(gzipFile)));
 		String content = IOUtils.toString(source);
 		return JsonIterator.deserialize(content, new TypeLiteral<List<DataRow>>(){});
 	}
 
-	public static List<DataRow> readFromJsonFileLineByLine(String gzipFile) throws FileNotFoundException, IOException{
+	public static List<DataRow> readFromJsonFileLineByLine(String gzipFile) throws IOException{
 		GZIPInputStream source = new GZIPInputStream(new FileInputStream(new File(gzipFile)));
 		String content = IOUtils.toString(source);
-		List<DataRow> out = new ArrayList<DataRow>();
+		List<DataRow> out = new ArrayList<>();
 		TypeLiteral<DataRow> t = new TypeLiteral<DataRow>(){};
 
 		for(String line : content.split("\n"))
@@ -286,7 +286,7 @@ public class TestUtils {
 
 
 
-	public static File dumpToTmpFile(Partition p) throws FileNotFoundException, IOException
+	public static File dumpToTmpFile(Partition p) throws IOException
 	{
 		File destination = File.createTempFile("partition_", ".gz");
 	    Output output = new Output(new GZIPOutputStream(new FileOutputStream(destination)));
@@ -300,7 +300,7 @@ public class TestUtils {
 		return destination;
 	}
 
-	public static File dumpCubeToTmpFile(Cube c) throws FileNotFoundException, IOException
+	public static File dumpCubeToTmpFile(Cube c) throws IOException
 	{
 		File destination = File.createTempFile("cube_", ".snappy");
 		c.save(destination.getAbsolutePath());
@@ -308,7 +308,7 @@ public class TestUtils {
 		return destination;
 	}
 	
-	public static File dumpCubeToTmpGzipFile(Cube c) throws FileNotFoundException, IOException
+	public static File dumpCubeToTmpGzipFile(Cube c) throws IOException
 	{
 		File destination = File.createTempFile("cube_", ".gz");
 		c.save(destination.getAbsolutePath());
@@ -317,7 +317,7 @@ public class TestUtils {
 	}
 
 	public static File dumpCubeToTmpFileAsJson(Cube c, String cubeName)
-		throws FileNotFoundException, IOException
+		throws IOException
 		{
 			long t0 = System.nanoTime();
 			File destination = File.createTempFile("cube_", ".gz");

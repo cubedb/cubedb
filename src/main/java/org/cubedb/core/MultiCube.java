@@ -9,7 +9,7 @@ import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.GroupedSearchResultRow;
 
-public interface MultiCube {
+public interface MultiCube extends BaseCubeInterface {
 	public void insert(List<DataRow> data);
 
 	public Map<GroupedSearchResultRow, Long> get(String cubeName, String fromPartition, String toPartition,
@@ -26,7 +26,7 @@ public interface MultiCube {
 
 	public boolean hasCube(String cubeName);
 
-	public void save(String path) throws FileNotFoundException, IOException;
+
 	public int deleteCube(String cubeName, String fromPartition, String toPartition);
 	public int deleteCube(String cubeName, int keepLastN);
 	public int deleteCube(int keepLastN);
@@ -34,11 +34,6 @@ public interface MultiCube {
 
 	public String getPath();
 
-	void load(String path);
-
-	Map<String, Object> getStats();
-
 	public void saveAsJson(String path) throws IOException;
-	public int optimize();
 
 }

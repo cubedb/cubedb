@@ -74,7 +74,7 @@ public class BOHKeyMap implements KeyMap {
 		if (b == null)
 			return null;
 		ByteBuffer buf = ByteBuffer.wrap(b.getValue());
-		return (int)buf.getInt();
+		return buf.getInt();
 	}
 
 	protected static Binary IntToBinary(int v) {

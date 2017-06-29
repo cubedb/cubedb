@@ -1,7 +1,5 @@
 package org.cubedb.core;
 
-import java.io.File;
-import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -9,21 +7,20 @@ import java.util.stream.Stream;
 import org.cubedb.core.beans.DataRow;
 import org.cubedb.core.beans.Filter;
 import org.cubedb.core.beans.SearchResult;
-import org.cubedb.core.beans.SearchResultRow;
 
 import com.esotericsoftware.kryo.KryoSerializable;
 
-public interface Partition extends KryoSerializable{
+public interface Partition extends KryoSerializable {
 
-	void insert(DataRow data);
+  void insert(DataRow data);
 
-	SearchResult get(List<Filter> filters, String groupFieldName);
+  SearchResult get(List<Filter> filters, String groupFieldName);
 
-	int getNumRecords();
+  int getNumRecords();
 
-	Map<String, Object> getStats();
+  Map<String, Object> getStats();
 
-	Stream<DataRow> asDataRowStream();
+  Stream<DataRow> asDataRowStream();
 
-	boolean optimize();
+  boolean optimize();
 }

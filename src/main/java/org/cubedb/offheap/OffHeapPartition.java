@@ -1,6 +1,7 @@
 package org.cubedb.offheap;
 
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -258,16 +259,14 @@ public class OffHeapPartition implements Partition {
 		// For every filtered column pick extract possible column value
 		for (Filter filter : filters) {
 			Set<String> columnValues = filtersByColumn.get(filter.getField());
-			for (String v : filter.getValues()) {
-				columnValues.add(v);
-			}
+			Collections.addAll(columnValues, filter.getValues());
 		}
 
 		// Convert possible column values to id-based column value matchers
 		for (Entry<String, Set<String>> e : filtersByColumn.entrySet()) {
 			String fieldName = e.getKey();
 			Lookup valueIdLookup = lookups.get(fieldName);
-			int[] valueIdList = e.getValue().stream().mapToInt(fieldValue -> valueIdLookup.getValue(fieldValue))
+			int[] valueIdList = e.getValue().stream().mapToInt(valueIdLookup::getValue)
 					.toArray();
 			if (valueIdList.length > 0) {
 				fieldNameToMatchers.put(fieldName, new IdMatcher(valueIdList));
