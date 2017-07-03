@@ -51,7 +51,7 @@ public class OffHeapPartitionTest {
 	}
 
 	@Test
-	public void testInsertDataWithExpiredIndex() throws NoSuchFieldException, SecurityException, Exception {
+	public void testInsertDataWithExpiredIndex() throws Exception {
 		// Constants.KEY_MAP_TTL
 		long oldTtl = Constants.KEY_MAP_TTL;
 		long newTtl = 10l;

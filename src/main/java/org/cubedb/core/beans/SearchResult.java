@@ -25,12 +25,12 @@ public class SearchResult {
 	Map<String, Map<String, Long>> totalCounts;
 
 	public static SearchResult buildEmpty(Set<String> metricNames) {
-		Map<String, Map<String, Long>> totalCounts = new HashMap<String, Map<String, Long>>();
+		Map<String, Map<String, Long>> totalCounts = new HashMap<>();
 		for (String metricName : metricNames) {
-			Map<String, Long> groupFieldValueToCounter = new HashMap<String, Long>();
+			Map<String, Long> groupFieldValueToCounter = new HashMap<>();
 			totalCounts.put(metricName, groupFieldValueToCounter);
 		}
-		SearchResult r = new SearchResult(new HashMap<GroupedSearchResultRow, Long>(),
+		SearchResult r = new SearchResult(new HashMap<>(),
 										  totalCounts);
 		return r;
 	}
@@ -49,9 +49,9 @@ public class SearchResult {
 		log.debug("Result size is {}", groupedResult.size());
 
 		Lookup groupFieldLookup = lookups.get(groupFieldName);
-		Map<String, Map<String, Long>> totalCounts = new HashMap<String, Map<String, Long>>(totalCounters.length);
+		Map<String, Map<String, Long>> totalCounts = new HashMap<>(totalCounters.length);
 		for (int m = 0; m < totalCounters.length; m++) {
-			Map<String, Long> groupValueToCounter = new HashMap(totalCounters[m].length);
+			Map<String, Long> groupValueToCounter = new HashMap<>(totalCounters[m].length);
 			for (int g = 0; g < totalCounters[m].length; g++) {
 				String groupFieldValue = isGroupLookup ? groupFieldLookup.getKey(g) : FAKE_GROUP_FIELD_VALUE;
 				groupValueToCounter.put(groupFieldValue, totalCounters[m][g]);

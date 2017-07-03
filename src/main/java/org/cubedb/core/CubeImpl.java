@@ -16,7 +16,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeSet;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -40,12 +47,16 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
 public class CubeImpl implements Cube {
+
+	private static final int PARALLEL_INSERT_COUNT_CONSTRAINT = 1500;
+	private static final int PARALLEL_INSERT_GROUP_SIZE_CONSTRAINT = 3;
+
 	public static final Logger log = LoggerFactory.getLogger(CubeImpl.class);
 	Map<String, Partition> partitions;
 	String partitionColumn;
 
 	public CubeImpl(String partitionColumn) {
-		partitions = new ConcurrentHashMap<String, Partition>();
+		partitions = new ConcurrentHashMap<>();
 		this.partitionColumn = partitionColumn;
 	}
 
@@ -59,7 +70,6 @@ public class CubeImpl implements Cube {
 			Partition partition = partitions.computeIfAbsent(p, this::createNewPartition);
 			for (DataRow d : groupedData.get(p)) {
 				partition.insert(d);
-
 			}
 		}
 	}
@@ -69,7 +79,7 @@ public class CubeImpl implements Cube {
 		return partitions.values().stream().mapToInt(p -> p.optimize() ? 1 : 0).sum();
 	}
 
-	protected class Insertor implements Runnable {
+	protected class Insertor implements Callable<Void> {
 		final private List<String> partitions;
 		final private Map<String, List<DataRow>> groupedData;
 
@@ -79,10 +89,10 @@ public class CubeImpl implements Cube {
 		}
 
 		@Override
-		public void run() {
+		public Void call() throws Exception {
 			insert(partitions, groupedData);
+			return null;
 		}
-
 	}
 
 	public void insertSequential(Map<String, List<DataRow>> groupedData) {
@@ -91,32 +101,27 @@ public class CubeImpl implements Cube {
 
 	public void insertParallel(Map<String, List<DataRow>> groupedData) {
 		int numThreads = Runtime.getRuntime().availableProcessors();
-		// numThreads = 2;
-		List<List<String>> partitionSequences = CubeUtils.partitionList(new ArrayList<String>(groupedData.keySet()));
+		List<List<String>> partitionSequences = CubeUtils.partitionList(new ArrayList<>(groupedData.keySet()));
 		log.debug("Will be using {} threads, with {} processors", partitionSequences.size(), numThreads);
-		Insertor[] insertors = new Insertor[partitionSequences.size()];
-		Thread[] threads = new Thread[insertors.length];
-		for (int i = 0; i < insertors.length; i++) {
-			insertors[i] = new Insertor(partitionSequences.get(i), groupedData);
-			threads[i] = new Thread(insertors[i]);
-			threads[i].start();
+		List<Insertor> tasks = new ArrayList<>();
+		for(List<String> partition : partitionSequences) {
+			tasks.add(new Insertor(partition, groupedData));
 		}
-		for (int i = 0; i < insertors.length; i++) {
-			try {
-				threads[i].join();
-			} catch (InterruptedException e) {
-				log.error("Interrupted");
-			}
+
+		ExecutorService threadPool = Executors.newFixedThreadPool(numThreads);
+		try{
+			threadPool.invokeAll(tasks);
+		} catch (InterruptedException e) {
+			log.error("Interrupted");
+		} finally {
+			threadPool.shutdownNow();
 		}
 	}
 
 	public void insert(List<DataRow> data) {
 		Map<String, List<DataRow>> groupedData = data.stream().collect(Collectors.groupingBy(DataRow::getPartition));
-		// insertSequential(groupedData);
-		// log.debug("The following partitions detected: {}",
-		// groupedData.keySet());
 		log.debug("Size of items: {}, number of groups: {}", data.size(), groupedData.size());
-		if (data.size() < 1500 || groupedData.size() <= 3) {
+		if (data.size() < PARALLEL_INSERT_COUNT_CONSTRAINT || groupedData.size() <= PARALLEL_INSERT_GROUP_SIZE_CONSTRAINT) {
 			log.debug("Using sequential insert");
 			insertSequential(groupedData);
 		} else {
@@ -130,7 +135,7 @@ public class CubeImpl implements Cube {
 		boolean isGroupLookup = groupBy != null;
 		String groupFieldName = isGroupLookup ? groupBy : SearchResult.FAKE_GROUP_FIELD_NAME;
 
-		Map<GroupedSearchResultRow, MutableLong> out = new HashMap<GroupedSearchResultRow, MutableLong>(1000, 0.5f);
+		Map<GroupedSearchResultRow, MutableLong> out = new HashMap<>(1000, 0.5f);
 		for (Pair<String, Partition> e : partitions) {
 			String partitionValue = e.getKey();
 			Partition partition = e.getValue();
@@ -161,7 +166,7 @@ public class CubeImpl implements Cube {
 		return out;
 	}
 
-	class Searcher implements Runnable {
+	private class Searcher implements Callable<Map<GroupedSearchResultRow, MutableLong>> {
 		final private List<Pair<String, Partition>> partitions;
 		private Map<GroupedSearchResultRow, MutableLong> result;
 		final private List<Filter> filters;
@@ -176,14 +181,14 @@ public class CubeImpl implements Cube {
 			this.groupBy = groupBy;
 		}
 
-		@Override
-		public void run() {
-			result = get(partitions, filters, fromPartition, toPartition, groupBy);
-		}
-
 		public Map<GroupedSearchResultRow, MutableLong> getResult() {
 			return result;
-		};
+		}
+
+		@Override
+		public Map<GroupedSearchResultRow, MutableLong> call() throws Exception {
+			return get(partitions, filters, fromPartition, toPartition, groupBy);
+		}
 
 	}
 
@@ -193,7 +198,7 @@ public class CubeImpl implements Cube {
 		long t0 = System.currentTimeMillis();
 		List<Pair<String, Partition>> namePartitionPair = partitions.entrySet().stream()
 				.filter((e) -> e.getKey().compareTo(fromPartition) >= 0 && e.getKey().compareTo(toPartition) <= 0)
-				.map(e -> new Pair<String, Partition>(e.getKey(), e.getValue())).collect(Collectors.toList());
+				.map(e -> new Pair<>(e.getKey(), e.getValue())).collect(Collectors.toList());
 		List<Filter> realFilters = filters.stream().filter((f) -> !f.getField().equals(partitionColumn))
 				.collect(Collectors.toList());
 		List<Filter> partitionFilters = filters.stream().filter((f) -> f.getField().equals(partitionColumn))
@@ -208,40 +213,46 @@ public class CubeImpl implements Cube {
 		Collections.shuffle(namePartitionPair);
 		final List<List<Pair<String, Partition>>> partitionSlices = CubeUtils.partitionList(namePartitionPair);
 
-		Searcher[] searchers = new Searcher[partitionSlices.size()];
-		Thread[] threads = new Thread[partitionSlices.size()];
-		for (int i = 0; i < searchers.length; i++) {
-			searchers[i] = new Searcher(partitionSlices.get(i), realFilters, fromPartitionFilter, toPartitionFilter,
-					groupBy);
-			threads[i] = new Thread(searchers[i]);
-			threads[i].start();
+		int parallelism = partitionSlices.size();
+		ExecutorService service = Executors.newFixedThreadPool(parallelism);
+		List<Searcher> tasks = new ArrayList<>();
+
+		for (int i = 0; i < parallelism; i++) {
+
+			tasks.add(new Searcher(partitionSlices.get(i), realFilters, fromPartitionFilter, toPartitionFilter,
+					groupBy));
 		}
 
 		try {
-			for (Thread thread : threads) {
-				thread.join();
+			List<Future<Map<GroupedSearchResultRow, MutableLong>>> searchResult = service.invokeAll(tasks);
+
+			long tPreReduce = System.currentTimeMillis();
+			log.debug("Search pre-reduce took {}ms", tPreReduce - t0);
+
+			Map<GroupedSearchResultRow, MutableLong> result = new HashMap<>();
+
+			for(Future<Map<GroupedSearchResultRow, MutableLong>> future : searchResult )
+			{
+				Map<GroupedSearchResultRow, MutableLong> futureResult = future.get();
+				for (Entry<GroupedSearchResultRow, MutableLong> e : futureResult.entrySet()) {
+					GroupedSearchResultRow row = e.getKey();
+					MutableLong c = result.computeIfAbsent(row, newRow -> new MutableLong());
+					MutableLong rowValue = e.getValue();
+					c.increment(rowValue.get());
+				}
 			}
-		} catch (InterruptedException e) {
+
+			long t1 = System.currentTimeMillis();
+			log.debug("Reduce took {}ms", t1 - tPreReduce);
+
+			return result.entrySet().stream().collect(Collectors.toMap(Entry::getKey, e -> e.getValue().get()));
+
+		} catch (InterruptedException | ExecutionException e) {
 			e.printStackTrace();
+		} finally {
+			service.shutdownNow();
 		}
-
-		long tPreReduce = System.currentTimeMillis();
-		log.debug("Search pre-reduce took {}ms", tPreReduce - t0);
-
-		Map<GroupedSearchResultRow, MutableLong> result = new HashMap<GroupedSearchResultRow, MutableLong>();
-		for (Searcher searcher : searchers) {
-			for (Entry<GroupedSearchResultRow, MutableLong> e : searcher.getResult().entrySet()) {
-				GroupedSearchResultRow row = e.getKey();
-				MutableLong c = result.computeIfAbsent(row, newRow -> new MutableLong());
-				MutableLong rowValue = e.getValue();
-				c.increment(rowValue.get());
-			}
-		}
-
-		long t1 = System.currentTimeMillis();
-		log.debug("Reduce took {}ms", t1 - tPreReduce);
-
-		return result.entrySet().stream().collect(Collectors.toMap(Entry::getKey, e -> e.getValue().get()));
+		return Collections.emptyMap();
 	}
 
 	@Override
@@ -255,7 +266,7 @@ public class CubeImpl implements Cube {
 		List<String> partitionKeys = partitions.keySet().stream().sorted((e, ot) -> ot.compareTo(e)).limit(lastRange)
 				.collect(Collectors.toList());
 		if (partitionKeys.size() == 0) {
-			return new HashMap<GroupedSearchResultRow, Long>();
+			return new HashMap<>();
 		}
 		final String toPartition = partitionKeys.get(0);
 		final String fromPartition = partitionKeys.get(partitionKeys.size() - 1);
@@ -267,7 +278,7 @@ public class CubeImpl implements Cube {
 	public TreeSet<String> getPartitions(final String from, final String to) {
 		return partitions.keySet().stream().filter(p -> from == null || from.compareTo(p) <= 0)
 				.filter(p -> from == null || to.compareTo(p) >= 0).sorted()
-				.collect(Collectors.toCollection(() -> new TreeSet<String>()));
+				.collect(Collectors.toCollection(TreeSet::new));
 	}
 
 	@Override
@@ -303,7 +314,7 @@ public class CubeImpl implements Cube {
 	public Map<String, Object> getStats() {
 		Map<String, Map<String, Object>> partitionStats = partitions.entrySet().stream()
 				.collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getStats()));
-		Map<String, Object> out = new HashMap<String, Object>();
+		Map<String, Object> out = new HashMap<>();
 		// out.put("partitionStats", partitionStats);
 		out.put(Constants.STATS_COLUMN_SIZE,
 				partitionStats.values().stream().mapToLong(e -> (Long) e.get(Constants.STATS_COLUMN_SIZE)).sum());
@@ -324,18 +335,13 @@ public class CubeImpl implements Cube {
 	}
 
 	@Override
-	public void saveAsJson(String saveFileName, String cubeName) {
-		try {
-			PrintStream p = new PrintStream(
-					new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(saveFileName))));
+	public void saveAsJson(String saveFileName, String cubeName) throws IOException {
+		try (PrintStream p = new PrintStream(
+				new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(saveFileName))))) {
 			partitions.entrySet().stream()
 					.flatMap((e) -> e.getValue().asDataRowStream().peek((row) -> row.setPartition(e.getKey())))
-					.peek((row) -> row.setCubeName(cubeName)).map((row) -> JsonStream.serialize(row))
-					.forEach((rowString) -> p.println(rowString));
-			p.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+					.peek((row) -> row.setCubeName(cubeName)).map(JsonStream::serialize)
+					.forEach(p::println);
 		}
 	}
 

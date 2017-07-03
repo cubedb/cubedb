@@ -58,8 +58,7 @@ public class CubeResource {
 			throw new NotFoundException(String.format("Could not find cube %s", cubeName));
 		}
 		Map<GroupedSearchResultRow, Long> result = cube.get(cubeName, range, buildFilters(filterCriterias));
-		return new APIResponse<Map<String, Map<String, Map<String, Long>>>>(CubeUtils.searchResultsToMap(result), info,
-				startTime);
+		return new APIResponse<>(CubeUtils.searchResultsToMap(result), info, startTime);
 	}
 
 	@GET
@@ -80,8 +79,7 @@ public class CubeResource {
 		Map<String, Map<String, Map<String, Map<String, Long>>>> groups = CubeUtils.searchResultsToGroupedMap(result);
 		long t_after_grouping = System.currentTimeMillis();
 		log.debug("Grouping took {}ms"+(t_after_grouping - t_before_grouping));
-		return new APIResponse<Map<String, Map<String, Map<String, Map<String, Long>>>>>(
-			groups, info, startTime);
+		return new APIResponse<>(groups, info, startTime);
 
 	}
 
@@ -103,7 +101,7 @@ public class CubeResource {
 		long startTs = System.currentTimeMillis();
 		cube.insert(rows);
 		log.info("Inserted {} rows", rows.size());
-		return new APIResponse<Map<String, Integer>>(ImmutableMap.of("numInsertedRows", rows.size()), info, startTs);
+		return new APIResponse<>(ImmutableMap.of("numInsertedRows", rows.size()), info, startTs);
 	}
 
 	@DELETE
@@ -116,11 +114,11 @@ public class CubeResource {
 		long t0 = System.currentTimeMillis();
 		System.gc();
 		log.debug("GC took {}ms", System.currentTimeMillis() - t0);
-		return new APIResponse<Map<String, Integer>>(ImmutableMap.of(
+		return new APIResponse<>(ImmutableMap.of(
 				"numDeletedPartitions", numDeletedPartitions,
 				"numOptimizedPartitions", numOptimizedPartitions,
 				"gcTimeMs", (int) (System.currentTimeMillis() - t0)
-				), info, startTs);
+		), info, startTs);
 	}
 
 	@DELETE
@@ -132,11 +130,11 @@ public class CubeResource {
 		long t0 = System.currentTimeMillis();
 		System.gc();
 		log.debug("GC took {}ms", System.currentTimeMillis() - t0);
-		return new APIResponse<Map<String, Integer>>(ImmutableMap.of(
+		return new APIResponse<>(ImmutableMap.of(
 				"numDeletedPartitions", numDeletedPartitions,
 				"numOptimizedPartitions", numOptimizedPartitions,
 				"gcTimeMs", (int) (System.currentTimeMillis() - t0)
-				), info, startTs);
+		), info, startTs);
 	}
 
 	@DELETE
@@ -149,11 +147,11 @@ public class CubeResource {
 		long t0 = System.currentTimeMillis();
 		System.gc();
 		log.debug("GC took {}ms", System.currentTimeMillis() - t0);
-		return new APIResponse<Map<String, Integer>>(ImmutableMap.of(
+		return new APIResponse<>(ImmutableMap.of(
 				"numDeletedPartitions", numDeletedPartitions,
 				"numOptimizedPartitions", numOptimizedPartitions,
 				"gcTimeMs", (int) (System.currentTimeMillis() - t0)
-				), info, startTs);
+		), info, startTs);
 	}
 
 	@DELETE
@@ -167,23 +165,23 @@ public class CubeResource {
 		long t0 = System.currentTimeMillis();
 		System.gc();
 		log.debug("GC took {}ms", System.currentTimeMillis() - t0);
-		return new APIResponse<Map<String, Integer>>(
+		return new APIResponse<>(
 				ImmutableMap.of(
 						"numDeletedPartitions", numDeletedPartitions,
 						"numOptimizedPartitions", numOptimizedPartitions,
 						"gcTimeMs", (int) (System.currentTimeMillis() - t0)
-						),
+				),
 				info, startTs);
 	}
 
 	@POST
 	@Path("/save")
-	public APIResponse<Map<String, String>> save(@Context UriInfo info) throws FileNotFoundException, IOException {
+	public APIResponse<Map<String, String>> save(@Context UriInfo info) throws IOException {
 		long startTs = System.currentTimeMillis();
 		log.info("Saving to {}", cube.getPath());
 		cube.save(cube.getPath());
 		log.info("Saving finished");
-		return new APIResponse<Map<String, String>>(ImmutableMap.of("savePath", cube.getPath()), info, startTs);
+		return new APIResponse<>(ImmutableMap.of("savePath", cube.getPath()), info, startTs);
 	}
 
 	@POST
@@ -194,13 +192,13 @@ public class CubeResource {
 		log.info("Saving to {}", path);
 		cube.saveAsJson(path);
 		log.info("Saving finished");
-		return new APIResponse<Map<String, String>>(ImmutableMap.of("savePath", path), info, startTs);
+		return new APIResponse<>(ImmutableMap.of("savePath", path), info, startTs);
 	}
 
 	@GET
 	@Path("/stats")
 	public APIResponse<Map<String, Object>> getStats(@Context UriInfo info) {
 		long startTs = System.currentTimeMillis();
-		return new APIResponse<Map<String, Object>>(cube.getStats(), info, startTs);
+		return new APIResponse<>(cube.getStats(), info, startTs);
 	}
 }
