@@ -142,6 +142,10 @@ public class BOHMap implements Map<Binary, Binary> {
 		return address;
 	}
 
+	private long getPartitionOffset(byte[] keyData) {
+		return Math.abs(hashFunction.apply(keyData) % partitionCount);
+	}
+
 	@Override
 	public int size() {
 		if (itemCount > Integer.MAX_VALUE)
@@ -164,8 +168,7 @@ public class BOHMap implements Map<Binary, Binary> {
 		final byte[] keyData = bKey.getValue();
 		final int keySize = keyData.length;
 
-		final int hash = Math.abs(hashFunction.apply(keyData));
-		final long offset = hash % partitionCount;
+		final long offset = getPartitionOffset(keyData);
 
 		// This is the location of the partition on which the entry key belongs
 		long locationAddress = unsafe.getAddress(partitionAddress + (offset * addressSize));
@@ -288,8 +291,7 @@ public class BOHMap implements Map<Binary, Binary> {
 		final byte[] keyData = bKey.getValue();
 		final int keySize = keyData.length;
 
-		final int hash = Math.abs(hashFunction.apply(keyData));
-		final long offset = hash % partitionCount;
+		final long offset = getPartitionOffset(keyData);
 
 		// This is the location of the partition on which the entry key belongs
 		long locationAddress = unsafe.getAddress(partitionAddress + (offset * addressSize));
@@ -360,8 +362,7 @@ public class BOHMap implements Map<Binary, Binary> {
 		final byte[] keyData = key.getValue();
 		final int keySize = keyData.length;
 
-		final int hash = Math.abs(hashFunction.apply(keyData));
-		final long offset = hash % partitionCount;
+		final long offset = getPartitionOffset(keyData);
 
 		// This is the location of the partition on which the entry key belongs
 		long locationAddress = unsafe.getAddress(partitionAddress + (offset * addressSize));
@@ -507,8 +508,7 @@ public class BOHMap implements Map<Binary, Binary> {
 		final byte[] keyData = bKey.getValue();
 		final int keySize = keyData.length;
 
-		final int hash = Math.abs(hashFunction.apply(keyData));
-		final long offset = hash % partitionCount;
+		final long offset = getPartitionOffset(keyData);
 
 		// This is the location of the partition on which the entry key belongs
 		long locationAddress = unsafe.getAddress(partitionAddress + (offset * addressSize));
