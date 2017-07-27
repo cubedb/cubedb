@@ -24,8 +24,8 @@ public class OffHeapMetric extends MultiBuffer implements Metric {
 
   @Override
   public long get(int index) {
-    if (index < startPos) return 0l;
-    if (index >= curPos) return 0l;
+    if (index < startPos) return 0L;
+    if (index >= curPos) return 0L;
     int pos = index - startPos;
     int positionWithinBuffer = pos % BUFFER_SIZE;
     int bufferIndex = pos / BUFFER_SIZE;

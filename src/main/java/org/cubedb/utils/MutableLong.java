@@ -5,7 +5,7 @@ public class MutableLong {
   long value;
 
   public MutableLong() {
-    this(0l);
+    this(0L);
   }
 
   public MutableLong(long initialValue) {

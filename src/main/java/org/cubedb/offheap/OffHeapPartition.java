@@ -170,7 +170,7 @@ public class OffHeapPartition implements Partition {
           m = TinyUtils.tinyMetricToOffHeap((TinyMetric) m);
           metrics.put(metricName, m);
         }
-        m.append(0l);
+        m.append(0L);
       }
       lastAppendTs = System.currentTimeMillis();
       size++;
@@ -241,7 +241,7 @@ public class OffHeapPartition implements Partition {
     long t0 = System.nanoTime();
     data.forEach(this::insert);
     long t1 = System.nanoTime() - t0;
-    long rowsPerSecond = 1000000000l * data.size() / t1;
+    long rowsPerSecond = 1000000000L * data.size() / t1;
     log.info(
         "Took {}ms to insert {} rows, {}mks/row",
         t1 / 1000 / 1000,
@@ -495,7 +495,7 @@ public class OffHeapPartition implements Partition {
         (t1 - t0) / 1000000.0,
         curSize);
     if (curSize > 0 && (t3 - t2) > 0) {
-      int rowsPerSecond = (int) (1000000000l * curSize / (t3 - t2));
+      int rowsPerSecond = (int) (1000000000L * curSize / (t3 - t2));
       log.debug("Bruteforce search itself took {} ms", (t3 - t2) / 1000000.0);
       log.debug("Bruteforce search is {} rows/second", rowsPerSecond);
     }
@@ -551,7 +551,7 @@ public class OffHeapPartition implements Partition {
     long metricSize = metrics.values().stream().mapToLong(Metric::size).sum();
     int columnBlocks = columns.values().stream().mapToInt(Column::getNumBuffers).sum();
     int metricBLocks = metrics.values().stream().mapToInt(Metric::getNumBuffers).sum();
-    long lookupSize = (long) (map != null ? map.size() : 0l) * columns.size() * Short.BYTES;
+    long lookupSize = (long) (map != null ? map.size() : 0L) * columns.size() * Short.BYTES;
     Map<String, Object> stats = new HashMap<String, Object>();
     stats.put(Constants.STATS_COLUMN_SIZE, columnSize);
     stats.put(Constants.STATS_METRIC_SIZE, metricSize);
