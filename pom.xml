@@ -190,6 +190,7 @@
                     <failsOnError>true</failsOnError>
                     <violationSeverity>warning</violationSeverity>
                     <linkXRef>false</linkXRef>
+                    <excludes>**/com/cfelde/bohmap/*.java</excludes>
                 </configuration>
             </plugin>
 
