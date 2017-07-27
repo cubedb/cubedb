@@ -20,10 +20,6 @@ public class CubeUtils {
    * Split array into n sublists fairly. Difference from Lists.partition is that: 1. We don't
    * specify the size of each sublist. We specify the number of sublists. 2. Elements are
    * distributed maximally equally.
-   *
-   * @param in
-   * @param numParts
-   * @return
    */
   public static <T> List<List<T>> partitionList(final List<T> in, int numParts) {
     double idealSize = (double) in.size() / numParts;

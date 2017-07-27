@@ -81,11 +81,11 @@ public class CubeResource {
 
     Map<GroupedSearchResultRow, Long> result =
         cube.get(cubeName, range, buildFilters(filterCriterias), groupBy);
-    long t_before_grouping = System.currentTimeMillis();
+    final long timeBeforeGrouping = System.currentTimeMillis();
     Map<String, Map<String, Map<String, Map<String, Long>>>> groups =
         CubeUtils.searchResultsToGroupedMap(result);
-    long t_after_grouping = System.currentTimeMillis();
-    log.debug("Grouping took {}ms" + (t_after_grouping - t_before_grouping));
+    final long timeAfterGrouping = System.currentTimeMillis();
+    log.debug("Grouping took {}ms" + (timeAfterGrouping - timeBeforeGrouping));
     return new APIResponse<>(groups, info, startTime);
   }
 
@@ -194,7 +194,7 @@ public class CubeResource {
   @POST
   @Path("/save")
   public APIResponse<Map<String, String>> save(@Context UriInfo info) throws IOException {
-    long startTs = System.currentTimeMillis();
+    final long startTs = System.currentTimeMillis();
     log.info("Saving to {}", cube.getPath());
     cube.save(cube.getPath());
     log.info("Saving finished");
@@ -204,7 +204,7 @@ public class CubeResource {
   @POST
   @Path("/saveJSON")
   public APIResponse<Map<String, String>> dump(@Context UriInfo info) throws IOException {
-    long startTs = System.currentTimeMillis();
+    final long startTs = System.currentTimeMillis();
     String path = cube.getPath() + "/json";
     log.info("Saving to {}", path);
     cube.saveAsJson(path);

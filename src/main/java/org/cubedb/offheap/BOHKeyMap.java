@@ -39,19 +39,19 @@ public class BOHKeyMap implements KeyMap {
 
   @Override
   public Integer get(byte[] b) {
-    return BinaryToInt(this.map.get(new Binary(b)));
+    return binaryToInt(this.map.get(new Binary(b)));
   }
 
   // This is totally not thread safe
   @Override
   public void put(byte[] k, int v) {
-    Binary b = IntToBinary(v);
+    Binary b = intToBinary(v);
     this.valueBinary.setValue(k);
     Binary prev = this.map.put(this.valueBinary, b);
     if (prev == null && this.map.size() >= this.numPartitions * 3) {
       // Our map is now overgrown!
       int newSize = this.numPartitions * 5;
-      long t0 = System.nanoTime();
+      final long t0 = System.nanoTime();
       BOHMap oldMap = this.map;
       createMap(newSize, 0);
       log.debug("Re-sizing map to {}", newSize);
@@ -69,13 +69,13 @@ public class BOHKeyMap implements KeyMap {
     return this.map.size();
   }
 
-  protected static Integer BinaryToInt(Binary b) {
+  protected static Integer binaryToInt(Binary b) {
     if (b == null) return null;
     ByteBuffer buf = ByteBuffer.wrap(b.getValue());
     return buf.getInt();
   }
 
-  protected static Binary IntToBinary(int v) {
+  protected static Binary intToBinary(int v) {
     ByteBuffer buf = ByteBuffer.wrap(new byte[4]);
     buf.putInt(v);
     return new Binary(buf.array());
@@ -83,9 +83,9 @@ public class BOHKeyMap implements KeyMap {
 
   @Override
   public Stream<Entry<byte[], Integer>> entrySet() {
-    return this.map
-      .entrySet()
-      .stream()
-      .map((e) -> new Pair<byte[], Integer>(e.getKey().getValue(), BinaryToInt(e.getValue())));
+    return map
+        .entrySet()
+        .stream()
+        .map((e) -> new Pair<byte[], Integer>(e.getKey().getValue(), binaryToInt(e.getValue())));
   }
 }

@@ -6,6 +6,5 @@ public class CubeExistsException extends Exception {
     super(format);
   }
 
-  /** */
   private static final long serialVersionUID = -494245440849015730L;
 }

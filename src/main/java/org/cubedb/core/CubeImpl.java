@@ -181,7 +181,10 @@ public class CubeImpl implements Cube {
     private final List<Pair<String, Partition>> partitions;
     private Map<GroupedSearchResultRow, MutableLong> result;
     private final List<Filter> filters;
-    private final String fromPartition, toPartition, groupBy;
+
+    private final String fromPartition;
+    private final String toPartition;
+    private final String groupBy;
 
     public Searcher(
         List<Pair<String, Partition>> partitions,

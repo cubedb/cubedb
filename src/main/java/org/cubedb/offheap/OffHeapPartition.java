@@ -198,11 +198,11 @@ public class OffHeapPartition implements Partition {
         lookups.put(f, new HashMapLookup());
         columns.put(f, new TinyColumn(size));
       }
-      _insert(row);
+      insertImpl(row);
     }
   }
 
-  protected void _insert(DataRow row) {
+  protected void insertImpl(DataRow row) {
     short[] fields = new short[fieldLookup.size()];
     int i = 0;
 
@@ -232,7 +232,7 @@ public class OffHeapPartition implements Partition {
 
   @Override
   public void insert(DataRow row) {
-    _insert(row);
+    insertImpl(row);
     lastInsertTs = System.currentTimeMillis();
   }
 
@@ -290,8 +290,8 @@ public class OffHeapPartition implements Partition {
   @Override
   public SearchResult get(List<Filter> filters, String groupFieldName) {
     // log.debug("Starting search");
-    long t0 = System.nanoTime(); // debug purposes
-    int curSize = size; // current max index of rows in the db
+    final long t0 = System.nanoTime(); // debug purposes
+    final int curSize = size; // current max index of rows in the db
 
     // a field to use for result grouping
     final boolean doFieldGrouping = groupFieldName != null;
@@ -349,8 +349,9 @@ public class OffHeapPartition implements Partition {
     final Column[] columns = getColumnsAsArray();
 
     int matchCount = 0; // Debug variable
-    final long t2, t3; // these ones are for time measurement (debug
-    // purposes only)
+    final long t2; // these are for time measurement (debug purposes only)
+    final long t3;
+
     // creating a map of matchers based on filter
 
     /*
@@ -366,12 +367,12 @@ public class OffHeapPartition implements Partition {
     /*
      * values of measures
      */
-    final long metricValues[] = new long[metricNames.length]; //
+    final long[] metricValues = new long[metricNames.length];
 
     /*
      * values of columns. Id's only, no real string values.
      */
-    final int columnValues[] = new int[fieldLookup.size()];
+    final int[] columnValues = new int[fieldLookup.size()];
 
     /*
      * Fast representation of filters. IdMatcher means we are doing only
