@@ -36,169 +36,187 @@ import jersey.repackaged.com.google.common.collect.ImmutableMap;
 @Path("/v1")
 @Produces(MediaType.APPLICATION_JSON)
 public class CubeResource {
-	public static final Logger log = LoggerFactory.getLogger(CubeResource.class);
-	@Context // injected response proxy supporting multiple threads
-	private HttpServletResponse response;
+  public static final Logger log = LoggerFactory.getLogger(CubeResource.class);
 
-	protected MultiCube cube;
+  @Context // injected response proxy supporting multiple threads
+  private HttpServletResponse response;
 
-	public CubeResource(MultiCube cube) {
-		this.cube = cube;
-	}
+  protected MultiCube cube;
 
-	@GET
-	@Path("/{cubeName}/last/{range}")
-	public APIResponse<Map<String, Map<String, Map<String, Long>>>> get(@PathParam("cubeName") String cubeName,
-			@PathParam("range") int range, @Context UriInfo info) {
-		final long startTime = System.currentTimeMillis();
-		final MultivaluedMap<String, String> filterCriterias = info.getQueryParameters();
+  public CubeResource(MultiCube cube) {
+    this.cube = cube;
+  }
 
-		if (!cube.hasCube(cubeName)) {
-			log.warn("Could not find cube {}", cubeName);
-			throw new NotFoundException(String.format("Could not find cube %s", cubeName));
-		}
-		Map<GroupedSearchResultRow, Long> result = cube.get(cubeName, range, buildFilters(filterCriterias));
-		return new APIResponse<>(CubeUtils.searchResultsToMap(result), info, startTime);
-	}
+  @GET
+  @Path("/{cubeName}/last/{range}")
+  public APIResponse<Map<String, Map<String, Map<String, Long>>>> get(
+      @PathParam("cubeName") String cubeName,
+      @PathParam("range") int range,
+      @Context UriInfo info) {
+    final long startTime = System.currentTimeMillis();
+    final MultivaluedMap<String, String> filterCriterias = info.getQueryParameters();
 
-	@GET
-	@Path("/{cubeName}/last/{range}/group_by/{groupBy}")
-	public APIResponse<Map<String, Map<String, Map<String, Map<String, Long>>>>>
-		get(@PathParam("cubeName") String cubeName,
-			@PathParam("range") int range, @PathParam("groupBy") String groupBy, @Context UriInfo info) {
-		final long startTime = System.currentTimeMillis();
-		final MultivaluedMap<String, String> filterCriterias = info.getQueryParameters();
+    if (!cube.hasCube(cubeName)) {
+      log.warn("Could not find cube {}", cubeName);
+      throw new NotFoundException(String.format("Could not find cube %s", cubeName));
+    }
+    Map<GroupedSearchResultRow, Long> result =
+        cube.get(cubeName, range, buildFilters(filterCriterias));
+    return new APIResponse<>(CubeUtils.searchResultsToMap(result), info, startTime);
+  }
 
-		if (!cube.hasCube(cubeName)) {
-			log.warn("Could not find cube {}", cubeName);
-			throw new NotFoundException(String.format("Could not find cube %s", cubeName));
-		}
+  @GET
+  @Path("/{cubeName}/last/{range}/group_by/{groupBy}")
+  public APIResponse<Map<String, Map<String, Map<String, Map<String, Long>>>>> get(
+      @PathParam("cubeName") String cubeName,
+      @PathParam("range") int range,
+      @PathParam("groupBy") String groupBy,
+      @Context UriInfo info) {
+    final long startTime = System.currentTimeMillis();
+    final MultivaluedMap<String, String> filterCriterias = info.getQueryParameters();
 
-		Map<GroupedSearchResultRow, Long> result = cube.get(cubeName, range, buildFilters(filterCriterias), groupBy);
-		long t_before_grouping = System.currentTimeMillis();
-		Map<String, Map<String, Map<String, Map<String, Long>>>> groups = CubeUtils.searchResultsToGroupedMap(result);
-		long t_after_grouping = System.currentTimeMillis();
-		log.debug("Grouping took {}ms"+(t_after_grouping - t_before_grouping));
-		return new APIResponse<>(groups, info, startTime);
+    if (!cube.hasCube(cubeName)) {
+      log.warn("Could not find cube {}", cubeName);
+      throw new NotFoundException(String.format("Could not find cube %s", cubeName));
+    }
 
-	}
+    Map<GroupedSearchResultRow, Long> result =
+        cube.get(cubeName, range, buildFilters(filterCriterias), groupBy);
+    long t_before_grouping = System.currentTimeMillis();
+    Map<String, Map<String, Map<String, Map<String, Long>>>> groups =
+        CubeUtils.searchResultsToGroupedMap(result);
+    long t_after_grouping = System.currentTimeMillis();
+    log.debug("Grouping took {}ms" + (t_after_grouping - t_before_grouping));
+    return new APIResponse<>(groups, info, startTime);
+  }
 
-	private List<Filter> buildFilters(MultivaluedMap<String, String> filterCriterias) {
-		List<Filter> filters = new ArrayList<Filter>();
-		for (Entry<String, List<String>> filterE : filterCriterias.entrySet()) {
-			String[] values = filterE.getValue().toArray(new String[0]);
-			Filter f = new Filter();
-			f.setField(filterE.getKey());
-			f.setValues(values);
-			filters.add(f);
-		}
-		return filters;
-	}
+  private List<Filter> buildFilters(MultivaluedMap<String, String> filterCriterias) {
+    List<Filter> filters = new ArrayList<Filter>();
+    for (Entry<String, List<String>> filterE : filterCriterias.entrySet()) {
+      String[] values = filterE.getValue().toArray(new String[0]);
+      Filter f = new Filter();
+      f.setField(filterE.getKey());
+      f.setValues(values);
+      filters.add(f);
+    }
+    return filters;
+  }
 
-	@POST
-	@Path("/insert")
-	public APIResponse<Map<String, Integer>> insert(List<DataRow> rows, @Context UriInfo info) {
-		long startTs = System.currentTimeMillis();
-		cube.insert(rows);
-		log.info("Inserted {} rows", rows.size());
-		return new APIResponse<>(ImmutableMap.of("numInsertedRows", rows.size()), info, startTs);
-	}
+  @POST
+  @Path("/insert")
+  public APIResponse<Map<String, Integer>> insert(List<DataRow> rows, @Context UriInfo info) {
+    long startTs = System.currentTimeMillis();
+    cube.insert(rows);
+    log.info("Inserted {} rows", rows.size());
+    return new APIResponse<>(ImmutableMap.of("numInsertedRows", rows.size()), info, startTs);
+  }
 
-	@DELETE
-	@Path("/keep/last/{numPartitions}")
-	public APIResponse<Map<String, Integer>> keepLastN(@PathParam("numPartitions") Integer numPartitions,
-			@Context UriInfo info) {
-		long startTs = System.currentTimeMillis();
-		int numDeletedPartitions = cube.deleteCube(numPartitions);
-		int numOptimizedPartitions = cube.optimize();
-		long t0 = System.currentTimeMillis();
-		System.gc();
-		log.debug("GC took {}ms", System.currentTimeMillis() - t0);
-		return new APIResponse<>(ImmutableMap.of(
-				"numDeletedPartitions", numDeletedPartitions,
-				"numOptimizedPartitions", numOptimizedPartitions,
-				"gcTimeMs", (int) (System.currentTimeMillis() - t0)
-		), info, startTs);
-	}
+  @DELETE
+  @Path("/keep/last/{numPartitions}")
+  public APIResponse<Map<String, Integer>> keepLastN(
+      @PathParam("numPartitions") Integer numPartitions, @Context UriInfo info) {
+    long startTs = System.currentTimeMillis();
+    int numDeletedPartitions = cube.deleteCube(numPartitions);
+    int numOptimizedPartitions = cube.optimize();
+    long t0 = System.currentTimeMillis();
+    System.gc();
+    log.debug("GC took {}ms", System.currentTimeMillis() - t0);
+    return new APIResponse<>(
+        ImmutableMap.of(
+            "numDeletedPartitions", numDeletedPartitions,
+            "numOptimizedPartitions", numOptimizedPartitions,
+            "gcTimeMs", (int) (System.currentTimeMillis() - t0)),
+        info,
+        startTs);
+  }
 
-	@DELETE
-	@Path("/{cubeName}")
-	public APIResponse<Map<String, Integer>> deleteCube(@PathParam("cubeName") String cubeName, @Context UriInfo info) {
-		long startTs = System.currentTimeMillis();
-		int numDeletedPartitions = cube.deleteCube(cubeName, 0);
-		int numOptimizedPartitions = cube.optimize();
-		long t0 = System.currentTimeMillis();
-		System.gc();
-		log.debug("GC took {}ms", System.currentTimeMillis() - t0);
-		return new APIResponse<>(ImmutableMap.of(
-				"numDeletedPartitions", numDeletedPartitions,
-				"numOptimizedPartitions", numOptimizedPartitions,
-				"gcTimeMs", (int) (System.currentTimeMillis() - t0)
-		), info, startTs);
-	}
+  @DELETE
+  @Path("/{cubeName}")
+  public APIResponse<Map<String, Integer>> deleteCube(
+      @PathParam("cubeName") String cubeName, @Context UriInfo info) {
+    long startTs = System.currentTimeMillis();
+    int numDeletedPartitions = cube.deleteCube(cubeName, 0);
+    int numOptimizedPartitions = cube.optimize();
+    long t0 = System.currentTimeMillis();
+    System.gc();
+    log.debug("GC took {}ms", System.currentTimeMillis() - t0);
+    return new APIResponse<>(
+        ImmutableMap.of(
+            "numDeletedPartitions", numDeletedPartitions,
+            "numOptimizedPartitions", numOptimizedPartitions,
+            "gcTimeMs", (int) (System.currentTimeMillis() - t0)),
+        info,
+        startTs);
+  }
 
-	@DELETE
-	@Path("/all/from/{fromPartition}/to/{toPartition}")
-	public APIResponse<Map<String, Integer>> deletePartitions(@PathParam("fromPartition") String fromPartition,
-			@PathParam("toPartition") String toPartition, @Context UriInfo info) {
-		long startTs = System.currentTimeMillis();
-		int numDeletedPartitions = cube.deleteCube(fromPartition, toPartition);
-		int numOptimizedPartitions = cube.optimize();
-		long t0 = System.currentTimeMillis();
-		System.gc();
-		log.debug("GC took {}ms", System.currentTimeMillis() - t0);
-		return new APIResponse<>(ImmutableMap.of(
-				"numDeletedPartitions", numDeletedPartitions,
-				"numOptimizedPartitions", numOptimizedPartitions,
-				"gcTimeMs", (int) (System.currentTimeMillis() - t0)
-		), info, startTs);
-	}
+  @DELETE
+  @Path("/all/from/{fromPartition}/to/{toPartition}")
+  public APIResponse<Map<String, Integer>> deletePartitions(
+      @PathParam("fromPartition") String fromPartition,
+      @PathParam("toPartition") String toPartition,
+      @Context UriInfo info) {
+    long startTs = System.currentTimeMillis();
+    int numDeletedPartitions = cube.deleteCube(fromPartition, toPartition);
+    int numOptimizedPartitions = cube.optimize();
+    long t0 = System.currentTimeMillis();
+    System.gc();
+    log.debug("GC took {}ms", System.currentTimeMillis() - t0);
+    return new APIResponse<>(
+        ImmutableMap.of(
+            "numDeletedPartitions", numDeletedPartitions,
+            "numOptimizedPartitions", numOptimizedPartitions,
+            "gcTimeMs", (int) (System.currentTimeMillis() - t0)),
+        info,
+        startTs);
+  }
 
-	@DELETE
-	@Path("/{cubeName}/from/{fromPartition}/to/{toPartition}")
-	public APIResponse<Map<String, Integer>> deletePartitionsOfCube(@PathParam("cubeName") String cubeName,
-			@PathParam("fromPartition") String fromPartition, @PathParam("toPartition") String toPartition,
-			@Context UriInfo info) {
-		long startTs = System.currentTimeMillis();
-		int numDeletedPartitions = cube.deleteCube(cubeName, fromPartition, toPartition);
-		int numOptimizedPartitions = cube.optimize();
-		long t0 = System.currentTimeMillis();
-		System.gc();
-		log.debug("GC took {}ms", System.currentTimeMillis() - t0);
-		return new APIResponse<>(
-				ImmutableMap.of(
-						"numDeletedPartitions", numDeletedPartitions,
-						"numOptimizedPartitions", numOptimizedPartitions,
-						"gcTimeMs", (int) (System.currentTimeMillis() - t0)
-				),
-				info, startTs);
-	}
+  @DELETE
+  @Path("/{cubeName}/from/{fromPartition}/to/{toPartition}")
+  public APIResponse<Map<String, Integer>> deletePartitionsOfCube(
+      @PathParam("cubeName") String cubeName,
+      @PathParam("fromPartition") String fromPartition,
+      @PathParam("toPartition") String toPartition,
+      @Context UriInfo info) {
+    long startTs = System.currentTimeMillis();
+    int numDeletedPartitions = cube.deleteCube(cubeName, fromPartition, toPartition);
+    int numOptimizedPartitions = cube.optimize();
+    long t0 = System.currentTimeMillis();
+    System.gc();
+    log.debug("GC took {}ms", System.currentTimeMillis() - t0);
+    return new APIResponse<>(
+        ImmutableMap.of(
+            "numDeletedPartitions", numDeletedPartitions,
+            "numOptimizedPartitions", numOptimizedPartitions,
+            "gcTimeMs", (int) (System.currentTimeMillis() - t0)),
+        info,
+        startTs);
+  }
 
-	@POST
-	@Path("/save")
-	public APIResponse<Map<String, String>> save(@Context UriInfo info) throws IOException {
-		long startTs = System.currentTimeMillis();
-		log.info("Saving to {}", cube.getPath());
-		cube.save(cube.getPath());
-		log.info("Saving finished");
-		return new APIResponse<>(ImmutableMap.of("savePath", cube.getPath()), info, startTs);
-	}
+  @POST
+  @Path("/save")
+  public APIResponse<Map<String, String>> save(@Context UriInfo info) throws IOException {
+    long startTs = System.currentTimeMillis();
+    log.info("Saving to {}", cube.getPath());
+    cube.save(cube.getPath());
+    log.info("Saving finished");
+    return new APIResponse<>(ImmutableMap.of("savePath", cube.getPath()), info, startTs);
+  }
 
-	@POST
-	@Path("/saveJSON")
-	public APIResponse<Map<String, String>> dump(@Context UriInfo info) throws IOException {
-		long startTs = System.currentTimeMillis();
-		String path = cube.getPath() + "/json";
-		log.info("Saving to {}", path);
-		cube.saveAsJson(path);
-		log.info("Saving finished");
-		return new APIResponse<>(ImmutableMap.of("savePath", path), info, startTs);
-	}
+  @POST
+  @Path("/saveJSON")
+  public APIResponse<Map<String, String>> dump(@Context UriInfo info) throws IOException {
+    long startTs = System.currentTimeMillis();
+    String path = cube.getPath() + "/json";
+    log.info("Saving to {}", path);
+    cube.saveAsJson(path);
+    log.info("Saving finished");
+    return new APIResponse<>(ImmutableMap.of("savePath", path), info, startTs);
+  }
 
-	@GET
-	@Path("/stats")
-	public APIResponse<Map<String, Object>> getStats(@Context UriInfo info) {
-		long startTs = System.currentTimeMillis();
-		return new APIResponse<>(cube.getStats(), info, startTs);
-	}
+  @GET
+  @Path("/stats")
+  public APIResponse<Map<String, Object>> getStats(@Context UriInfo info) {
+    long startTs = System.currentTimeMillis();
+    return new APIResponse<>(cube.getStats(), info, startTs);
+  }
 }

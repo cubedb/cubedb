@@ -10,8 +10,8 @@ import org.cubedb.core.beans.GroupedSearchResultRow;
 
 public interface Cube extends BaseCubeInterface {
 
-  Map<GroupedSearchResultRow, Long> get(String fromPartition, String toPartition,
-      List<Filter> filters, String groupBy);
+  Map<GroupedSearchResultRow, Long> get(
+      String fromPartition, String toPartition, List<Filter> filters, String groupBy);
 
   Map<GroupedSearchResultRow, Long> get(int lastRange, List<Filter> filters, String groupBy);
 
