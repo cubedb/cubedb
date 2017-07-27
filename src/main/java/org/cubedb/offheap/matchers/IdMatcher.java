@@ -1,13 +1,12 @@
 package org.cubedb.offheap.matchers;
 
-import java.util.Arrays;
-import java.util.function.IntPredicate;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
+
+import java.util.Arrays;
+import java.util.function.IntPredicate;
 
 public class IdMatcher {
 

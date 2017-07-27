@@ -1,8 +1,8 @@
 package org.cubedb.offheap;
 
-import java.nio.ByteBuffer;
-
 import org.cubedb.core.Metric;
+
+import java.nio.ByteBuffer;
 
 public class OffHeapMetric extends MultiBuffer implements Metric {
 

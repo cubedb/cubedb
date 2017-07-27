@@ -1,7 +1,8 @@
 package org.cubedb.core.beans;
 
-import java.util.Arrays;
 import org.cubedb.core.Constants;
+
+import java.util.Arrays;
 
 public class Filter {
 

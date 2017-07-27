@@ -1,20 +1,19 @@
 package org.cubedb.core.beans;
 
+import org.cubedb.core.CubeImpl;
+import org.cubedb.core.Metric;
+import org.cubedb.core.beans.GroupedSearchResultRow;
+import org.cubedb.core.counters.CounterContainer;
+import org.cubedb.core.lookups.Lookup;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import com.esotericsoftware.minlog.Log;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
 import java.util.Collections;
-import org.cubedb.core.lookups.Lookup;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.esotericsoftware.minlog.Log;
-
-import org.cubedb.core.CubeImpl;
-import org.cubedb.core.Metric;
-
-import org.cubedb.core.beans.GroupedSearchResultRow;
-import org.cubedb.core.counters.CounterContainer;
 
 public class SearchResult {
   public static final Logger log = LoggerFactory.getLogger(SearchResult.class);

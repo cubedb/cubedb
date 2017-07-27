@@ -1,13 +1,13 @@
 package org.cubedb.core;
 
+import org.cubedb.core.beans.DataRow;
+import org.cubedb.core.beans.Filter;
+import org.cubedb.core.beans.GroupedSearchResultRow;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
-import org.cubedb.core.beans.DataRow;
-import org.cubedb.core.beans.Filter;
-import org.cubedb.core.beans.GroupedSearchResultRow;
 
 public interface MultiCube extends BaseCubeInterface {
   public void insert(List<DataRow> data);

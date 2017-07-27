@@ -1,10 +1,10 @@
 package org.cubedb.core.counters;
 
-import java.util.Map;
-
 import org.cubedb.core.lookups.Lookup;
 import org.cubedb.core.beans.GroupedSearchResultRow;
 import org.cubedb.core.beans.SearchResult;
+
+import java.util.Map;
 
 public class CounterContainer {
 

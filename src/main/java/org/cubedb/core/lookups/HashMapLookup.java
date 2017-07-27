@@ -1,19 +1,18 @@
 package org.cubedb.core.lookups;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-
 import org.cubedb.core.Constants;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 public class HashMapLookup implements Lookup {
 

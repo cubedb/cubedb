@@ -1,5 +1,12 @@
 package org.cubedb.core;
 
+import org.cubedb.core.beans.DataRow;
+import org.cubedb.core.beans.Filter;
+import org.cubedb.core.beans.GroupedSearchResultRow;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -11,12 +18,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-
-import org.cubedb.core.beans.DataRow;
-import org.cubedb.core.beans.Filter;
-import org.cubedb.core.beans.GroupedSearchResultRow;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class MultiCubeImpl implements MultiCube {
   public static final Logger log = LoggerFactory.getLogger(MultiCubeImpl.class);

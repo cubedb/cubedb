@@ -1,10 +1,5 @@
 package org.cubedb.api;
 
-import java.io.File;
-import java.net.URI;
-
-import javax.ws.rs.core.UriBuilder;
-
 import org.cubedb.api.ext.JsonIteratorConverter;
 import org.cubedb.api.filters.AccessOriginFilter;
 import org.cubedb.api.filters.GenericExceptionMapper;
@@ -12,13 +7,17 @@ import org.cubedb.api.resources.CubeResource;
 import org.cubedb.core.Constants;
 import org.cubedb.core.MultiCube;
 import org.cubedb.core.MultiCubeImpl;
+
+import com.esotericsoftware.minlog.Log;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.message.GZipEncoder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.filter.EncodingFilter;
 
-import com.esotericsoftware.minlog.Log;
+import java.io.File;
+import java.net.URI;
+import javax.ws.rs.core.UriBuilder;
 
 public class CubeApplication extends ResourceConfig {
 

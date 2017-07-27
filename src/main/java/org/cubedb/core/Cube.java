@@ -1,12 +1,12 @@
 package org.cubedb.core;
 
+import org.cubedb.core.beans.Filter;
+import org.cubedb.core.beans.GroupedSearchResultRow;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeSet;
-
-import org.cubedb.core.beans.Filter;
-import org.cubedb.core.beans.GroupedSearchResultRow;
 
 public interface Cube extends BaseCubeInterface {
 

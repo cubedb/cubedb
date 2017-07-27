@@ -1,13 +1,13 @@
 package org.cubedb.api.utils;
 
-import java.util.Map;
-
-import javax.ws.rs.core.UriInfo;
+import org.cubedb.utils.CubeUtils;
 
 import com.jsoniter.output.JsonStream;
-import org.cubedb.utils.CubeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
+import javax.ws.rs.core.UriInfo;
 
 public class APIResponse<T> {
 
