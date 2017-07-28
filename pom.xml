@@ -12,12 +12,26 @@
         <jetty.version>9.4.0.M1</jetty.version>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>jsoniter-snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <updatePolicy>always</updatePolicy>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
     <dependencies>
 
         <dependency>
             <groupId>com.jsoniter</groupId>
             <artifactId>jsoniter</artifactId>
-            <version>0.9.15</version>
+            <version>0.9.16-20170728.161611-3</version>
         </dependency>
 
         <dependency>
