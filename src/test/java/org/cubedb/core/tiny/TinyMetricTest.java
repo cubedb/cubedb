@@ -11,31 +11,30 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 
-/**
- * Created by krash on 28.06.17.
- */
+/** Created by krash on 28.06.17. */
 public class TinyMetricTest extends BaseMetricTest {
-    @Override
-    protected TinyMetric createMetric() {
-        return new TinyMetric();
-    }
+  @Override
+  protected TinyMetric createMetric() {
+    return new TinyMetric();
+  }
 
-    @Test
-    public void testSerDe() {
-        TinyMetric metric = createMetric();
-        for (int i = 1; i <= 10; i++) {
-            metric.append(i);
-        }
-        Kryo kryo = new Kryo();
-        ByteArrayOutputStream bao = new ByteArrayOutputStream();
-        Output output = new Output(bao);
-        kryo.writeObject(output, metric);
-        output.close();
-        TinyMetric deser = kryo.readObject(new Input(new ByteArrayInputStream(bao.toByteArray())), TinyMetric.class);
-        assertEquals(metric.size(), deser.size());
-        assertEquals(metric.getNumRecords(), deser.getNumRecords());
-        for (int i = 0; i < metric.getNumRecords(); i++) {
-            assertEquals(metric.get(i), deser.get(i));
-        }
+  @Test
+  public void testSerDe() {
+    TinyMetric metric = createMetric();
+    for (int i = 1; i <= 10; i++) {
+      metric.append(i);
     }
+    Kryo kryo = new Kryo();
+    ByteArrayOutputStream bao = new ByteArrayOutputStream();
+    Output output = new Output(bao);
+    kryo.writeObject(output, metric);
+    output.close();
+    TinyMetric deser =
+        kryo.readObject(new Input(new ByteArrayInputStream(bao.toByteArray())), TinyMetric.class);
+    assertEquals(metric.size(), deser.size());
+    assertEquals(metric.getNumRecords(), deser.getNumRecords());
+    for (int i = 0; i < metric.getNumRecords(); i++) {
+      assertEquals(metric.get(i), deser.get(i));
+    }
+  }
 }
