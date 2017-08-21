@@ -133,6 +133,11 @@ public class CubeResource {
   @Path("/{cubeName}")
   public APIResponse<Map<String, Integer>> deleteCube(
       @PathParam("cubeName") String cubeName, @Context UriInfo info) {
+    if (!cube.hasCube(cubeName)) {
+      log.warn("Could not find cube {}", cubeName);
+      throw new NotFoundException(String.format("Could not find cube %s", cubeName));
+    }
+
     long startTs = System.currentTimeMillis();
     int numDeletedPartitions = cube.deleteCube(cubeName, 0);
     int numOptimizedPartitions = cube.optimize();
@@ -176,6 +181,11 @@ public class CubeResource {
       @PathParam("fromPartition") String fromPartition,
       @PathParam("toPartition") String toPartition,
       @Context UriInfo info) {
+    if (!cube.hasCube(cubeName)) {
+      log.warn("Could not find cube {}", cubeName);
+      throw new NotFoundException(String.format("Could not find cube %s", cubeName));
+    }
+
     long startTs = System.currentTimeMillis();
     int numDeletedPartitions = cube.deleteCube(cubeName, fromPartition, toPartition);
     int numOptimizedPartitions = cube.optimize();
