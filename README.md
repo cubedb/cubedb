@@ -370,6 +370,18 @@ logOpts="-Dlog4j.configuration=$log_properties"
 
 Just ctrl-C the task and wait a little bit. It is advised to save the data before the shutdown.
 
+### Running on Docker
+
+It's possible to build and run CubeDB in a container using a supplied Dockerfile. Given a working
+Docker server/client on the machine run the following in the root of the CubeDB repository:
+
+```shell
+docker build -t cubedb .
+docker run -t -p 80:80 cubedb
+```
+
+CubeDB will then be available on the default HTTP port.
+
 ## Technical details
 
 - current version of CubeDB is implemented in Java 8. You need to have it installed in order to process it.
