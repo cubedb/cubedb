@@ -98,41 +98,44 @@ public class MultiCubeImpl implements MultiCube {
   }
 
   public synchronized void save(String path, boolean asJson) throws IOException {
-    File p = new File(path);
-    if (p.exists() && p.isFile()) {
+    File targetDirectory = new File(path);
+    if (targetDirectory.exists() && targetDirectory.isFile()) {
       log.error("Attempting to save to directory");
       throw new InvalidParameterException("Path specified is a file");
     }
-    if (!p.exists()) {
-      p.mkdirs();
+    if (!targetDirectory.exists()) {
+      targetDirectory.mkdirs();
     }
 
-    File destination;
-    destination = Files.createTempDirectory(p.toPath(), ".tmp").toFile();
-    log.info("Saving temporarily to {}", destination.getAbsolutePath());
+    File tmpDirectory = Files.createTempDirectory(targetDirectory.toPath(), ".tmp").toFile();
+    log.info("Saving temporarily to {}", tmpDirectory.getAbsolutePath());
     cubes
         .entrySet()
         .stream()
         .parallel()
         .forEach(
-            e -> {
-              String saveFileName = destination.getAbsolutePath() + "/" + e.getKey() + ".snappy";
+            cube -> {
+              String tmpPath = tmpDirectory.getAbsolutePath()
+                               + "/" + cube.getKey()
+                               + (asJson ? ".gz" : ".snappy");
               try {
-                if (!asJson) e.getValue().save(saveFileName);
-                else e.getValue().saveAsJson(saveFileName, e.getKey());
-                File f = new File(saveFileName);
-                File newF = new File(p, f.getName());
-                f.renameTo(newF);
-
-              } catch (FileNotFoundException e1) {
-                log.error("File not found: {}", saveFileName);
-                log.error("error", e1);
-              } catch (IOException e1) {
-                log.error("Could not save {} in {}", e.getKey(), saveFileName);
-                e1.printStackTrace();
+                if (asJson) {
+                  cube.getValue().saveAsJson(tmpPath, cube.getKey());
+                } else {
+                  cube.getValue().save(tmpPath);
+                }
+                File tmpFile = new File(tmpPath);
+                File targetFile = new File(targetDirectory, tmpFile.getName());
+                tmpFile.renameTo(targetFile);
+              } catch (FileNotFoundException e) {
+                log.error("File not found: {}", tmpPath);
+                log.error("error", e);
+              } catch (IOException e) {
+                log.error("Could not save {} in {}", cube.getKey(), tmpPath);
+                e.printStackTrace();
               }
             });
-    destination.delete();
+    tmpDirectory.delete();
     lastSaveTsMs = System.currentTimeMillis();
   }
 
