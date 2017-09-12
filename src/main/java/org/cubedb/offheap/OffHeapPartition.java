@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,7 +36,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 
 public class OffHeapPartition implements Partition {
 
@@ -189,8 +189,7 @@ public class OffHeapPartition implements Partition {
   protected void addNewFields(DataRow row) {
     Set<String> newFields = new HashSet<String>(row.getFields().keySet());
     for (String f : fieldLookup.getKeys())
-      if (row.getFields().containsKey(f))
-        newFields.remove(f);
+      if (row.getFields().containsKey(f)) newFields.remove(f);
 
     if (newFields.size() > 0) {
       for (String f : newFields) {
@@ -574,6 +573,16 @@ public class OffHeapPartition implements Partition {
         .stream()
         .collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().size()));
     return stats;
+  }
+
+  @Override
+  public Map<String, Set<String>> getFieldToValues() {
+    return lookups
+        .entrySet()
+        .stream()
+        .collect(
+            Collectors.toMap(
+                Entry::getKey, e -> new HashSet<String>(Arrays.asList(e.getValue().getKeys()))));
   }
 
   @Override

@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,7 +46,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-
 
 public class CubeImpl implements Cube {
 
@@ -369,29 +369,51 @@ public class CubeImpl implements Cube {
             .entrySet()
             .stream()
             .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getStats()));
+
+    Map<String, Set<String>> cubeFieldToValues = new HashMap<>();
+    partitions
+        .values()
+        .stream()
+        .map(Partition::getFieldToValues)
+        .forEach(
+            fieldToValues -> {
+              fieldToValues.forEach(
+                  (field, values) -> {
+                    cubeFieldToValues
+                        .computeIfAbsent(field, k -> new TreeSet<String>())
+                        .addAll(values);
+                  });
+            });
+
     Map<String, Object> out = new HashMap<>();
     // out.put("partitionStats", partitionStats);
     out.put(
+        Constants.STATS_CUBE_FIELD_TO_VALUE_NUM,
+        cubeFieldToValues
+        .entrySet()
+        .stream()
+        .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().size())));
+    out.put(
         Constants.STATS_COLUMN_SIZE,
         partitionStats
-            .values()
-            .stream()
-            .mapToLong(e -> (Long) e.get(Constants.STATS_COLUMN_SIZE))
-            .sum());
+        .values()
+        .stream()
+        .mapToLong(e -> (Long) e.get(Constants.STATS_COLUMN_SIZE))
+        .sum());
     out.put(
         Constants.STATS_METRIC_SIZE,
         partitionStats
-            .values()
-            .stream()
-            .mapToLong(e -> (Long) e.get(Constants.STATS_METRIC_SIZE))
-            .sum());
+        .values()
+        .stream()
+        .mapToLong(e -> (Long) e.get(Constants.STATS_METRIC_SIZE))
+        .sum());
     out.put(
         Constants.STATS_COLUMN_BLOCKS,
         partitionStats
-            .values()
-            .stream()
-            .mapToInt(e -> (Integer) e.get(Constants.STATS_COLUMN_BLOCKS))
-            .sum());
+        .values()
+        .stream()
+        .mapToInt(e -> (Integer) e.get(Constants.STATS_COLUMN_BLOCKS))
+        .sum());
     out.put(
         Constants.STATS_METRIC_BLOCKS,
         partitionStats

@@ -8,6 +8,7 @@ import com.esotericsoftware.kryo.KryoSerializable;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public interface Partition extends KryoSerializable {
@@ -19,6 +20,8 @@ public interface Partition extends KryoSerializable {
   int getNumRecords();
 
   Map<String, Object> getStats();
+
+  Map<String, Set<String>> getFieldToValues();
 
   Stream<DataRow> asDataRowStream();
 
