@@ -364,11 +364,6 @@ public class CubeImpl implements Cube {
 
   @Override
   public Map<String, Object> getStats() {
-    Map<String, Map<String, Object>> partitionStats =
-        partitions
-            .entrySet()
-            .stream()
-            .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getStats()));
 
     Map<String, Set<String>> cubeFieldToValues = new HashMap<>();
     partitions
@@ -385,8 +380,32 @@ public class CubeImpl implements Cube {
                   });
             });
 
+    String maxPartition = partitions
+                          .keySet()
+                          .stream()
+                          .max(String::compareTo)
+                          .get();
+
+    String minPartition = partitions
+                          .keySet()
+                          .stream()
+                          .min(String::compareTo)
+                          .get();
+
+    Map<String, Map<String, Object>> partitionStats =
+        partitions
+        .entrySet()
+        .stream()
+        .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getStats()));
+
     Map<String, Object> out = new HashMap<>();
     // out.put("partitionStats", partitionStats);
+    out.put(
+        Constants.STATS_CUBE_MAX_PARTITION,
+        maxPartition);
+    out.put(
+        Constants.STATS_CUBE_MIN_PARTITION,
+        minPartition);
     out.put(
         Constants.STATS_CUBE_FIELD_TO_VALUE_NUM,
         cubeFieldToValues
