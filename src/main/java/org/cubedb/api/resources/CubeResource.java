@@ -222,6 +222,20 @@ public class CubeResource {
     return new APIResponse<>(ImmutableMap.of("savePath", path), info, startTs);
   }
 
+
+  @GET
+  @Path("/stats/{cubeName}")
+  public APIResponse<Map<String, Object>> getCubeStats(@PathParam("cubeName") String cubeName,
+                                                       @Context UriInfo info) throws IOException {
+    final long startTs = System.currentTimeMillis();
+    if (!cube.hasCube(cubeName)) {
+      log.warn("Could not find cube {}", cubeName);
+      throw new NotFoundException(String.format("Could not find cube %s", cubeName));
+    }
+    return new APIResponse<>(cube.getCube(cubeName).getStats(), info, startTs);
+  }
+
+
   @GET
   @Path("/stats")
   public APIResponse<Map<String, Object>> getStats(@Context UriInfo info) {

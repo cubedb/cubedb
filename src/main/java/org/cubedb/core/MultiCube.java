@@ -29,6 +29,8 @@ public interface MultiCube extends BaseCubeInterface {
 
   public boolean hasCube(String cubeName);
 
+  public Cube getCube(String cubeName);
+
   public int deleteCube(String cubeName, String fromPartition, String toPartition);
 
   public int deleteCube(String cubeName, int keepLastN);

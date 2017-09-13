@@ -77,6 +77,11 @@ public class MultiCubeImpl implements MultiCube {
   }
 
   @Override
+  public Cube getCube(String cubeName) {
+    return cubes.get(cubeName);
+  }
+
+  @Override
   public Map<GroupedSearchResultRow, Long> get(String cubeName, int lastNum, List<Filter> filters) {
     return get(cubeName, lastNum, filters, null);
   }
