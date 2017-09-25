@@ -26,6 +26,10 @@ public class Constants {
   public static final String STATS_NUM_LARGE_BLOCKS = "numLargeBlocks";
   public static final String STATS_IS_READONLY_PARTITION = "isReadOnly";
   public static final String STATS_NUM_READONLY_PARTITIONS = "numReadOnlyPartitions";
+  public static final String STATS_CUBE_FIELD_TO_VALUE_NUM = "cubeFieldToValueNum";
+  public static final String STATS_CUBE_MAX_PARTITION = "cubeMaxPartition";
+  public static final String STATS_CUBE_MIN_PARTITION = "cubeMinPartition";
+
   public static long KEY_MAP_TTL =
       1 * 24 * 3600 * 1000; // 1 day, milliseconds. Please note it is not final.
   public static final boolean sendStats = true;
