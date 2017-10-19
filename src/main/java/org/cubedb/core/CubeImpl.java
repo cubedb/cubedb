@@ -384,13 +384,13 @@ public class CubeImpl implements Cube {
                           .keySet()
                           .stream()
                           .max(String::compareTo)
-                          .get();
+                          .orElse(null);
 
     String minPartition = partitions
                           .keySet()
                           .stream()
                           .min(String::compareTo)
-                          .get();
+                          .orElse(null);
 
     Map<String, Map<String, Object>> partitionStats =
         partitions
