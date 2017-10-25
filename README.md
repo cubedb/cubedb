@@ -6,17 +6,252 @@ A simple, stupid and fast in-memory multi-key counter store.
 
 Created by the Badoo BI tech team CubeDB lets us explore billions of incoming events live. The
 database does not give any persistence or reliabilty guarantees, keeps all of it's data in memory
-and is engineered to do one thing only: answer simple data queries in milliseconds.
+and is designed to do one thing only: answer simple data queries in milliseconds.
 
 CubeDB operates on data points, and every data point has a partition field, a set of string
 dimension fields and a set of integer metric fields.
 
 Data points with the same sets of dimension and metric fields are aggregated within Cubes. A Cube
-can answer queries about the data it contains.
+can answer queries about the data set it contains.
+
+## Usage example
+
+For installation see the "Installing and compiling" section below. Also a Docker image is available
+as as alternative way to test run CubeDB - for which see the "Running on Docker" section.
+
+Given a working CubeDB instance on http://locahost:9998 let's see what's inside:
+
+```
+> curl http://localhost:9998/v1/stats
+{
+  "header": {
+    "requestTs": 1508938484932,
+    "processingTimeMs": 0,
+    "request": {},
+    "params": {}
+  },
+  "response": {
+    "numLargeBlocks": 0,
+    "columnSizeBytes": 0,
+    "numPartitions": 0,
+    "numReadOnlyPartitions": 0,
+    "metricSizeBytes": 0,
+    "numRecords": 0,
+    "numCubes": 0,
+    "cubeStats": {},
+    "columnBlocks": 0,
+    "metricBlocks": 0
+  }
+}
+```
+
+Notice that there are no cubes and no records in CubeDB.
+
+Now insert a single data point:
+
+```
+> data='[{ "partition": "partition-01", "counters": { "c": 1 }, "fields": { "field_1": "1" }, "cubeName": "test_cube" }]'
+> echo $data | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://localhost:9998/v1/insert`
+{
+  "header": {
+    "requestTs": 1508939480327,
+    "processingTimeMs": 24,
+    "request": null,
+    "params": null
+  },
+  "response": {
+    "numInsertedRows": 1
+}
+```
+
+Data points are inserted as a list of JSON maps, each representing a single data point. Here the
+list contains a single data point only.
+
+A cube was created with a single partition:
+
+```
+> curl http://localhost:9998/v1/stats
+{
+  "header": {
+    "requestTs": 1508939607001,
+    "processingTimeMs": 25,
+    "request": {},
+    "params": {}
+  },
+  "response": {
+    "numLargeBlocks": 0,
+    "columnSizeBytes": 2,
+    "numPartitions": 1,
+    "numReadOnlyPartitions": 0,
+    "metricSizeBytes": 8,
+    "numRecords": 1,
+    "numCubes": 1,
+    "cubeStats": {
+      "test_cube": {
+        "cubeFieldToValueNum": {
+          "field_1": 2
+        },
+        "cubeMinPartition": "partition-01",
+        "numLargeBlocks": 0,
+        "columnSizeBytes": 2,
+        "numPartitions": 1,
+        "numReadOnlyPartitions": 0,
+        "metricSizeBytes": 8,
+        "numRecords": 1,
+        "cubeMaxPartition": "partition-01",
+        "columnBlocks": 1,
+        "metricBlocks": 1
+      }
+    },
+    "columnBlocks": 1,
+    "metricBlocks": 1
+  }
+}
+```
+
+Put one more data point into another partition:
+
+```
+> data='[{ "partition": "partition-02", "counters": { "c": 1 }, "fields": { "field_1": "1" },
+"cubeName": "test_cube" }]'
+> echo $data | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://localhost:9998/v1/insert`
+{
+  "header": {
+    "requestTs": 1508941112127,
+    "processingTimeMs": 4,
+    "request": null,
+    "params": null
+  },
+  "response": {
+    "numInsertedRows": 1
+  }
+}
+```
+
+Now let's see how many data points are there in the cube:
+
+```
+> curl http://localhost:9998/v1/stats
+{
+  "header": {
+    "requestTs": 1508941384208,
+    "processingTimeMs": 0,
+    "request": {},
+    "params": {}
+  },
+  "response": {
+    "numLargeBlocks": 0,
+    "columnSizeBytes": 4,
+    "numPartitions": 2,
+    "numReadOnlyPartitions": 0,
+    "metricSizeBytes": 16,
+    "numRecords": 2,
+    "numCubes": 1,
+    "cubeStats": {
+      "test_cube": {
+        "cubeFieldToValueNum": {
+          "field_1": 2
+        },
+        "cubeMinPartition": "partition-01",
+        "numLargeBlocks": 0,
+        "columnSizeBytes": 4,
+        "numPartitions": 2,
+        "numReadOnlyPartitions": 0,
+        "metricSizeBytes": 16,
+        "numRecords": 2,
+        "cubeMaxPartition": "partition-02",
+        "columnBlocks": 2,
+        "metricBlocks": 2
+      }
+    },
+    "columnBlocks": 2,
+    "metricBlocks": 2
+  }
+}
+```
+
+Notice that there are two lexicographically sorted partitions in the Cube. Also in the Cube there's
+only one dimension field with two possible values (a null value and the string supplied in inserts).
+
+Retrieve data from the cube:
+
+```
+> curl http://localhost:9998/v1/test_cube/last/100
+{
+  "header": {
+    "requestTs": 1508942013048,
+    "processingTimeMs": 36,
+    "request": {},
+    "params": {
+      "range": [
+        "100"
+      ],
+      "cubeName": [
+        "test_cube"
+      ]
+    }
+  },
+  "response": {
+    "p": {
+      "partition-01": {
+        "c": 1
+      },
+      "partition-02": {
+        "c": 1
+      }
+    },
+    "field_1": {
+      "1": {
+        "c": 2
+      }
+    }
+  }
+}
+```
+
+There are two partitions in CubeDB, each with single data point. There are two data points with the
+field "field_1" with value "1".
+
+It's possible to filter the data by a single field or multiple fields:
+
+```
+> curl http://localhost:9998/v1/test_cube/last/100?field_1=null
+{
+  "header": {
+    "requestTs": 1508943342728,
+    "processingTimeMs": 16,
+    "request": {
+      "field_1": [
+        "null"
+      ]
+    },
+    "params": {
+      "range": [
+        "100"
+      ],
+      "cubeName": [
+        "test_cube"
+      ]
+    }
+  },
+  "response": {
+    "p": {
+      "partition-01": {
+        "c": 0
+      },
+      "partition-02": {
+        "c": 0
+      }
+    }
+  }
+}
+```
+
+We did not insert null values yet so there's nothing in both cube partitions.
 
 ## Explanation in SQL terms
 
-### Data Structure
+### Data structure
 CubeDB is a database that stores data in the following structure :
 - table T, (also referred here as *cube*)
 - string field 'p' (partition field)
@@ -351,19 +586,15 @@ POST-ing to `http://127.0.0.1:9998/v1/saveJSON` will dump whole database in huma
 
 ### Installation
 
-**Requirements:** you need git, jdk 8 and maven to be installed on your system
+**Requirements:** you need git, JDK 8 and Maven to be installed on your system
 
 ```
 git clone git@github.com:sztanko/cubedb.git
 cd cubedb/
 mvn package -DskipTests
-mv target/cubedb-0.0.1-SNAPSHOT.jar cubedb.jar
+mv target/cubedb-*-SNAPSHOT.jar cubedb.jar
 ```
-
-### Running
-
-```
-java -XX:MaxDirectMemorySize=10G -Xmx2000M -jar cubedb.jar <port> <path_for_dumps>
+ -jar cubedb.jar <port> <path_for_dumps>
 ```
 
 I recommend creating a run.sh file that would run it for you.
@@ -380,7 +611,7 @@ logOpts="-Dlog4j.configuration=$log_properties"
 
 ### Stopping the server
 
-Just ctrl-C the task and wait a little bit. It is advised to save the data before the shutdown.
+Just Ctrl-C the task and wait a little bit. It is advised to save the data before the shutdown.
 
 ### Running on Docker
 
