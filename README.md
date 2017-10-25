@@ -2,6 +2,18 @@
 
 A simple, stupid and fast in-memory multi-key counter store.
 
+## Synopsis
+
+Created by the Badoo BI tech team CubeDB lets us explore billions of incoming events live. The
+database does not give any persistence or reliabilty guarantees, keeps all of it's data in memory
+and is engineered to do one thing only: answer simple data queries in milliseconds.
+
+CubeDB operates on data points, and every data point has a partition field, a set of string
+dimension fields and a set of integer metric fields.
+
+Data points with the same sets of dimension and metric fields are aggregated within Cubes. A Cube
+can answer queries about the data it contains.
+
 ## Explanation in SQL terms
 
 ### Data Structure
