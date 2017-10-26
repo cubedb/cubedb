@@ -35,7 +35,8 @@ CubeDB lets you answer the following example questions:
 - group the events in hours by parameter values, and count events in the groups
 - group the events by one value, filter by another, and count events in the groups
 
-And so on. The results are presented in JSON meant to be used for data visualisation purposes.
+And so on. The results are presented in JSON meant to be used for data visualisation purposes, all
+available in dozens of milliseconds.
 
 ## Usage example
 
