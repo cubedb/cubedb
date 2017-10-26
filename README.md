@@ -31,9 +31,11 @@ CubeDB.
 CubeDB lets you answer the following example questions:
 - count the number of events in hourly partitions
 - count the number of events in hourly partitions with given parameter values
-- count the number of events in an subinterval of hourly partitions
+- count the number of events in a subinterval of hourly partitions
 - group the events in hours by parameter values, and count events in the groups
 - group the events by one value, filter by another, and count events in the groups
+
+And so on.
 
 ## Usage example
 
