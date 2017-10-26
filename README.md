@@ -21,7 +21,7 @@ as as alternative way to test run CubeDB - for which see the "Running on Docker"
 
 Given a working CubeDB instance on http://locahost:9998 let's see what's inside:
 
-```
+```shell
 > curl http://localhost:9998/v1/stats
 {
   "header": {
@@ -49,9 +49,22 @@ Notice that there are no cubes and no records in CubeDB.
 
 Now insert a single data point:
 
-```
-> data='[{ "partition": "partition-01", "counters": { "c": 1 }, "fields": { "field_1": "1" }, "cubeName": "test_cube" }]'
-> echo $data | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://localhost:9998/v1/insert`
+```shell
+> read -d '' json <<"EOF"
+[
+  {
+    "partition": "partition-01",
+    "counters": {
+      "c": 1
+    },
+    "fields": {
+      "field_1": "1"
+    },
+    "cubeName": "test_cube"
+  }
+]
+EOF
+> echo "$json" | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://localhost:9998/v1/insert`
 {
   "header": {
     "requestTs": 1508939480327,
@@ -69,7 +82,7 @@ list contains a single data point only.
 
 A cube was created with a single partition:
 
-```
+```shell
 > curl http://localhost:9998/v1/stats
 {
   "header": {
@@ -111,10 +124,22 @@ A cube was created with a single partition:
 
 Put one more data point into another partition:
 
-```
-> data='[{ "partition": "partition-02", "counters": { "c": 1 }, "fields": { "field_1": "1" },
-"cubeName": "test_cube" }]'
-> echo $data | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://localhost:9998/v1/insert`
+```shell
+> read -d '' json <<"EOF"
+[
+  {
+    "partition": "partition-02",
+    "counters": {
+      "c": 1
+    },
+    "fields": {
+      "field_1": "1"
+    },
+    "cubeName": "test_cube"
+  }
+]
+EOF
+> echo $json | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://localhost:9998/v1/insert`
 {
   "header": {
     "requestTs": 1508941112127,
@@ -130,7 +155,7 @@ Put one more data point into another partition:
 
 Now let's see how many data points are there in the cube:
 
-```
+```shell
 > curl http://localhost:9998/v1/stats
 {
   "header": {
@@ -175,7 +200,7 @@ only one dimension field with two possible values (a null value and the string s
 
 Retrieve data from the Cube:
 
-```
+```shell
 > curl http://localhost:9998/v1/test_cube/last/100
 {
   "header": {
@@ -214,7 +239,7 @@ field "field_1" with value "1".
 
 It's possible to filter the data by a single field or multiple fields:
 
-```
+```shell
 > curl http://localhost:9998/v1/test_cube/last/100?field_1=null
 {
   "header": {
@@ -247,7 +272,7 @@ It's possible to filter the data by a single field or multiple fields:
 }
 ```
 
-We did not insert null values yet so there's nothing in both cube partitions.
+We did not insert null values yet so there's nothing in both partitions.
 
 ## Explanation in SQL terms
 
