@@ -6,8 +6,8 @@ A simple, stupid and fast in-memory multi-key counter store.
 
 Created by the Badoo BI tech team CubeDB lets us explore tens of millions of incoming events
 **live**. The database keeps all of it's data in memory and is designed to do one thing only: answer
-simple data queries about the number of data points in partition intervals really fast, i.e. within
-tens of milliseconds.
+simple queries about the number of data points in partition intervals really fast, i.e. within tens
+of milliseconds.
 
 CubeDB operates on Cubes. A Cube is a collection of data points split into partitions. Every data
 point has a partitioning field, a set of string dimension fields and a set of integer metric fields. A
