@@ -14,7 +14,7 @@ partition field is used for retrieving intervals of partitions containing the da
 
 Here at Badoo a single Cube corresponds to a single event type, partitions represent ordered time
 intervals (hours and days), and dimension fields are event parameters. All of the incoming events
-are inserted upon receival and become instantly explorable through the interface built on top of
+are inserted immediately upon receival and become instantly explorable through the interface built on top of
 CubeDB.
 
 CubeDB is a server-side reimplementation of [Crossfilter](https://square.github.io/crossfilter/), so
