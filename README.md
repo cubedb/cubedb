@@ -173,7 +173,7 @@ Now let's see how many data points are there in the cube:
 Notice that there are two lexicographically sorted partitions in the Cube. Also in the Cube there's
 only one dimension field with two possible values (a null value and the string supplied in inserts).
 
-Retrieve data from the cube:
+Retrieve data from the Cube:
 
 ```
 > curl http://localhost:9998/v1/test_cube/last/100
@@ -324,20 +324,6 @@ group by 'name', p
 ```
 To put it in simple terms, this query gives you the SUMS of each edge of an N-dimensinal datacube.
 
-In the future, I plan to add the support of the following query:
-
-```sql
-select
-G1, G2, ... Gn,
-SUM(M1), SUM(M2), ... SUM(Mn)
-FROM T
-WHERE D1 in (DQ1) and D2 in (DQ2) ...
-and p between PFrom and PTo
-GROUP by G1, G2, ... Gn
-```
-
-Which is a simple pivot.
-
 ### Inserting data
 
 You can delete the data only by partitions. In practical terms, you usually specify day or hour as the value
@@ -418,7 +404,7 @@ CubeDB supports gzipped requests and responses.
 
 Data is inserted via HTTP POST:
 
-`echo $data | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://127.0.0.1:9998/v1/insert`
+`echo $data | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://localhost:9998/v1/insert`
 
 $data itself is a json array of rows with metrics
 ```json
@@ -520,31 +506,31 @@ an **upsert** rather then *insert*.
 
 Retrieve data for all cubes from between partitions {fromPartition}/{toPartition}:
 
-`curl -s --request GET --header 'Content-Type: application/json' http://127.0.0.1:9998/v1/all/from/{fromPartition}/to/{toPartition}`
+`curl -s --request GET --header 'Content-Type: application/json' http://localhost:9998/v1/all/from/{fromPartition}/to/{toPartition}`
 
 Retrieve data for a given cube {cubeName} from between partitions {fromPartition}/{toPartition}:
 
-`curl -s --request GET --header 'Content-Type: application/json' http://127.0.0.1:9998/v1/{cubeName}/from/{fromPartition}/to/{toPartition}`
+`curl -s --request GET --header 'Content-Type: application/json' http://localhost:9998/v1/{cubeName}/from/{fromPartition}/to/{toPartition}`
 
 Retrieve data for a given cube {cubeName} from the last {num} partitions:
 
-`curl -s --request GET --header 'Content-Type: application/json' http://127.0.0.1:9998/v1/{cubeName}/last/{num}`
+`curl -s --request GET --header 'Content-Type: application/json' http://localhost:9998/v1/{cubeName}/last/{num}`
 
 Retrieve data for a given cube {cubeName} from the last {num} partitions, where field {field_name}
 has {field_value} value:
 
-`curl -s --request GET --header 'Content-Type: application/json' http://127.0.0.1:9998/v1/{cubeName}/last/{num}/?{field_name}={field_value}`
+`curl -s --request GET --header 'Content-Type: application/json' http://localhost:9998/v1/{cubeName}/last/{num}/?{field_name}={field_value}`
 
 Retrieve data for a given cube {cubeName} from the last {num} partitions, where data is grouped by field {field_name}:
 
-`curl -s --request GET --header 'Content-Type: application/json' http://127.0.0.1:9998/v1/{cubeName}/last/{num}/group_by/{field_name}`
+`curl -s --request GET --header 'Content-Type: application/json' http://localhost:9998/v1/{cubeName}/last/{num}/group_by/{field_name}`
 
 
 ### Deleting data
 
 Deleting happens via DELETE HTTP method. You can only remove enitre partitions or ranges of partitions.
 
-`curl -s --request DELETE --header 'Content-Type: application/json' http://127.0.0.1:9998/v1/all/from/{fromPartition}/to/{toPartition}`
+`curl -s --request DELETE --header 'Content-Type: application/json' http://localhost:9998/v1/all/from/{fromPartition}/to/{toPartition}`
 
 - `/v1/keep/last/{numPartitions}` would delete all but the last *numPartitions*
 - `/v1/{cubeName}` would delete (drop) table {cubeName}
@@ -553,7 +539,7 @@ Deleting happens via DELETE HTTP method. You can only remove enitre partitions o
 
 ### Statistics and monitoring
 
-`http://127.0.0.1:9998/v1/stats` will give you all sorts of technical information,
+`http://localhost:9998/v1/stats` will give you all sorts of technical information,
 including the list of all tables and number of partitions for each of them and in total.
 It will also tell you the approximate size occupied by data., number of partitions that can be found
 in heap and off-heap (see next chapter for explanations).
@@ -563,7 +549,7 @@ in heap and off-heap (see next chapter for explanations).
 Please bear in mind that data is not saved automatically on shutdown. YOu have to trigger saving manually.
 On startup, the data is loaded from the directory specified in the command line argument.
 
-POST-ing to `http://127.0.0.1:9998/v1/save` will trigger a database dump to disk.
+POST-ing to `http://localhost:9998/v1/save` will trigger a database dump to disk.
 
 - each table is serialized into a separate file.
 - files are gzipped
@@ -572,7 +558,7 @@ POST-ing to `http://127.0.0.1:9998/v1/save` will trigger a database dump to disk
 - data is serialized in it's internal, hoighly efficient binary format.
 - **WARNING** dumps are meant just to survive the restarts and it is not guaranteed that they will be compatible withe the new versions of cubeDB.
 
-POST-ing to `http://127.0.0.1:9998/v1/saveJSON` will dump whole database in human readible format.
+POST-ing to `http://localhost:9998/v1/saveJSON` will dump whole database in human readible format.
 
 - each table is serialized into a separate file.
 - files are gzipped
@@ -588,16 +574,15 @@ POST-ing to `http://127.0.0.1:9998/v1/saveJSON` will dump whole database in huma
 
 **Requirements:** you need git, JDK 8 and Maven to be installed on your system
 
-```
+```shell
 git clone git@github.com:sztanko/cubedb.git
 cd cubedb/
 mvn package -DskipTests
 mv target/cubedb-*-SNAPSHOT.jar cubedb.jar
-```
- -jar cubedb.jar <port> <path_for_dumps>
+java -jar cubedb.jar <port> <path_for_dumps>
 ```
 
-I recommend creating a run.sh file that would run it for you.
+I recommend creating a `run.sh` file that would run it for you.
 
 ```shell
 path="/tmp/cubedumps" # Directory for dumps
