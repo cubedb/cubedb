@@ -4,14 +4,13 @@ A simple, stupid and fast in-memory multi-key counter store.
 
 ## Synopsis
 
-Created by the Badoo BI tech team CubeDB lets us explore billions of incoming events live. The
+Created by the Badoo BI tech team CubeDB lets us explore tens of millions of incoming events **live**. The
 database keeps all of it's data in memory and is designed to do one thing only: answer simple data
-queries about the number of data points in partition intervals.
+queries about the number of data points in partition intervals really fast.
 
 CubeDB operates on Cubes. A Cube is a collection of data points split into partitions. Every data
 point has a partitioning field, a set of string dimension fields and a set of integer metric fields. A
-partition field is used for retrieving intervals of partitions containing the data points. The data
-can be filtered and grouped by dimension field values.
+partition field is used for retrieving intervals of partitions containing the data points.
 
 Here at Badoo a single Cube corresponds to a single event type, partitions represent ordered time
 intervals (hours and days), and dimension fields are event parameters. All of the incoming events
