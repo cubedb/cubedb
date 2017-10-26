@@ -18,6 +18,11 @@ intervals (hours and days), and dimension fields are event parameters. All of th
 are inserted upon receival and become instantly explorable through the interface built on top of
 CubeDB.
 
+CubeDB is a server-side reimplementation of [Crossfilter](https://square.github.io/crossfilter/), so
+we also have an [explanation in terms of the library](README-Crossfilter.md).
+
+There's also an [explanation in terms of SQL](README-SQL.md).
+
 ## Usage example
 
 For installation see the "Installing and compiling" section below. Also a Docker image is available
