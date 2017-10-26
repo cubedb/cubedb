@@ -4,9 +4,10 @@ A simple, stupid and fast in-memory multi-key counter store.
 
 ## Synopsis
 
-Created by the Badoo BI tech team CubeDB lets us explore tens of millions of incoming events **live**. The
-database keeps all of it's data in memory and is designed to do one thing only: answer simple data
-queries about the number of data points in partition intervals really fast.
+Created by the Badoo BI tech team CubeDB lets us explore tens of millions of incoming events
+**live**. The database keeps all of it's data in memory and is designed to do one thing only: answer
+simple data queries about the number of data points in partition intervals really fast, i.e. within
+tens of milliseconds.
 
 CubeDB operates on Cubes. A Cube is a collection of data points split into partitions. Every data
 point has a partitioning field, a set of string dimension fields and a set of integer metric fields. A
@@ -14,13 +15,25 @@ partition field is used for retrieving intervals of partitions containing the da
 
 Here at Badoo a single Cube corresponds to a single event type, partitions represent ordered time
 intervals (hours and days), and dimension fields are event parameters. All of the incoming events
-are inserted immediately upon receival and become instantly explorable through the interface built on top of
-CubeDB.
+are inserted immediately upon receival and become instantly explorable through the interface built
+on top of CubeDB.
 
 CubeDB is a server-side reimplementation of [Crossfilter](https://square.github.io/crossfilter/), so
 we also have an [explanation in terms of the library](README-Crossfilter.md).
 
 There's also an [explanation in terms of SQL](README-SQL.md).
+
+## Typical usage scenario
+
+Imagine a data set of 30 million events with a common set of parameters partitioned by 24 hours and loaded into
+CubeDB.
+
+CubeDB lets you answer the following example questions:
+    - count the number of events in hourly partitions
+    - count the number of events in hourly partitions with given parameter values
+    - count the number of events in an subinterval of hourly partitions
+    - group the events in hours by parameter values, and count events in the groups
+    - group the events by one value, filter by another, and count events in the groups
 
 ## Usage example
 
