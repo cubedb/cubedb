@@ -29,11 +29,11 @@ Imagine a data set of 30 million events with a common set of parameters partitio
 CubeDB.
 
 CubeDB lets you answer the following example questions:
-    - count the number of events in hourly partitions
-    - count the number of events in hourly partitions with given parameter values
-    - count the number of events in an subinterval of hourly partitions
-    - group the events in hours by parameter values, and count events in the groups
-    - group the events by one value, filter by another, and count events in the groups
+- count the number of events in hourly partitions
+- count the number of events in hourly partitions with given parameter values
+- count the number of events in an subinterval of hourly partitions
+- group the events in hours by parameter values, and count events in the groups
+- group the events by one value, filter by another, and count events in the groups
 
 ## Usage example
 
