@@ -234,7 +234,7 @@ Retrieve data from the Cube:
 }
 ```
 
-There are two partitions in CubeDB, each with single data point. There are two data points with the
+There are two partitions in CubeDB, each with a single data point. There are two data points with the
 field "field_1" with value "1".
 
 It's possible to filter the data by a single field or multiple fields:
@@ -427,8 +427,8 @@ in heap and off-heap (see next chapter for explanations).
 
 ### Saving and backup
 
-Please bear in mind that data is not saved automatically on shutdown. YOu have to trigger saving manually.
-On startup, the data is loaded from the directory specified in the command line argument.
+Please bear in mind that data is not saved automatically on shutdown. You have to trigger saving manually.
+On startup the data is loaded from the directory specified in the command line argument.
 
 POST-ing to `http://localhost:9998/v1/save` will trigger a database dump to disk.
 
