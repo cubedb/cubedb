@@ -6,13 +6,17 @@ A simple, stupid and fast in-memory multi-key counter store.
 
 Created by the Badoo BI tech team CubeDB lets us explore billions of incoming events live. The
 database keeps all of it's data in memory and is designed to do one thing only: answer simple data
-queries as fast as possible.
+queries about the number of data points in partition intervals.
 
-CubeDB operates on data points, and every data point has a partition field, a set of string
-dimension fields and a set of integer metric fields.
+CubeDB operates on Cubes. A Cube is a collection of data points split into partitions. Every data
+point has a partitioning field, a set of string dimension fields and a set of integer metric fields. A
+partition field is used for retrieving intervals of partitions containing the data points. The data
+can be filtered and grouped by dimension field values.
 
-Data points with the same sets of dimension and metric fields are aggregated within Cubes. A Cube
-can answer queries about the data set it contains.
+Here at Badoo a single Cube corresponds to a single event type, partitions represent ordered time
+intervals (hours and days), and dimension fields are event parameters. All of the incoming events
+are inserted upon receival and become instantly explorable through the interface built on top of
+CubeDB.
 
 ## Usage example
 
@@ -45,7 +49,7 @@ Given a working CubeDB instance on http://locahost:9998 let's see what's inside:
 }
 ```
 
-Notice that there are no cubes and no records in CubeDB.
+Notice that there are no cubes and no records in CubeDB yet.
 
 Now insert a single data point:
 
