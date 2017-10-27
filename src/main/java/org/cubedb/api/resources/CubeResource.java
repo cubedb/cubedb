@@ -47,6 +47,51 @@ public class CubeResource {
   }
 
   @GET
+  @Path("/{cubeName}/from/{fromPartition}/to/{toPartition}")
+  public APIResponse<Map<String, Map<String, Map<String, Long>>>> get(
+      @PathParam("cubeName") String cubeName,
+      @PathParam("fromPartition") String fromPartition,
+      @PathParam("toPartition") String toPartition,
+      @Context UriInfo info) {
+    final long startTime = System.currentTimeMillis();
+    final MultivaluedMap<String, String> filterCriterias = info.getQueryParameters();
+
+    if (!cube.hasCube(cubeName)) {
+      log.warn("Could not find cube {}", cubeName);
+      throw new NotFoundException(String.format("Could not find cube %s", cubeName));
+    }
+    Map<GroupedSearchResultRow, Long> result =
+        cube.get(cubeName, fromPartition, toPartition, buildFilters(filterCriterias));
+    return new APIResponse<>(CubeUtils.searchResultsToMap(result), info, startTime);
+  }
+
+  @GET
+  @Path("/{cubeName}/from/{fromPartition}/to/{toPartition}/group_by/{groupBy}")
+  public APIResponse<Map<String, Map<String, Map<String, Map<String, Long>>>>> get(
+      @PathParam("cubeName") String cubeName,
+      @PathParam("fromPartition") String fromPartition,
+      @PathParam("toPartition") String toPartition,
+      @PathParam("groupBy") String groupBy,
+      @Context UriInfo info) {
+    final long startTime = System.currentTimeMillis();
+    final MultivaluedMap<String, String> filterCriterias = info.getQueryParameters();
+
+    if (!cube.hasCube(cubeName)) {
+      log.warn("Could not find cube {}", cubeName);
+      throw new NotFoundException(String.format("Could not find cube %s", cubeName));
+    }
+    Map<GroupedSearchResultRow, Long> result =
+        cube.get(cubeName, fromPartition, toPartition, buildFilters(filterCriterias), groupBy);
+    final long timeBeforeGrouping = System.currentTimeMillis();
+    Map<String, Map<String, Map<String, Map<String, Long>>>> groups =
+        CubeUtils.searchResultsToGroupedMap(result);
+    final long timeAfterGrouping = System.currentTimeMillis();
+    log.debug("Grouping took {}ms" + (timeAfterGrouping - timeBeforeGrouping));
+    return new APIResponse<>(groups, info, startTime);
+  }
+
+
+  @GET
   @Path("/{cubeName}/last/{range}")
   public APIResponse<Map<String, Map<String, Map<String, Long>>>> get(
       @PathParam("cubeName") String cubeName,
