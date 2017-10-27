@@ -66,7 +66,7 @@ public class CubeResource {
   }
 
   @GET
-  @Path("/{cubeName}/from/{fromPartition}/to/{toPartition}/groupBy/{groupBy}")
+  @Path("/{cubeName}/from/{fromPartition}/to/{toPartition}/group_by/{groupBy}")
   public APIResponse<Map<String, Map<String, Map<String, Map<String, Long>>>>> get(
       @PathParam("cubeName") String cubeName,
       @PathParam("fromPartition") String fromPartition,
