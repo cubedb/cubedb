@@ -1,3 +1,5 @@
+![CubeDb][image_logo]
+
 # CubeDB
 
 A simple, stupid and fast in-memory multi-key counter store.
@@ -540,3 +542,6 @@ introspection into what is exactly happenning in the
 ## Known bugs
 
 - In some rare edge cases, CubeDB gives an 0 count of "null" value for a field for partitions which where created before this field.
+
+
+[image_logo]: https://raw.githubusercontent.com/cubedb/react-cubedb/master/static/banner_horizontal.png
