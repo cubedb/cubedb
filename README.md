@@ -544,4 +544,4 @@ introspection into what is exactly happenning in the
 - In some rare edge cases, CubeDB gives an 0 count of "null" value for a field for partitions which where created before this field.
 
 
-[image_logo]: https://raw.githubusercontent.com/cubedb/react-cubedb/master/static/banner_horizontal.png
+[image_logo]: https://raw.githubusercontent.com/cubedb/cubedb/master/static/banner_horizontal.png
