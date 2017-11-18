@@ -62,7 +62,7 @@ public class MultiCubeConcurrencyTest {
     final Saver s1 = new Saver(savePath.toString(), c);
     Thread st1 = new Thread(s1);
     final Saver s2 = new Saver(savePath.toString(), c);
-    Thread st2 = new Thread(s1);
+    Thread st2 = new Thread(s2);
     final long t0 = System.nanoTime();
     st1.start();
     st2.start();
@@ -72,9 +72,12 @@ public class MultiCubeConcurrencyTest {
     final long saveTime1 = s1.totalTimeNs;
     final long saveTime2 = s2.totalTimeNs;
     final long allTime = t1 - t0;
-    // log.info("Took {}mks to save, {}mks to get, {}mks alltogether in
-    // parallel", saveTime/1000, getTime/1000, allTime/1000);
-    assertTrue(allTime >= saveTime1 + saveTime2);
+    log.info(
+        "Took {}mks to save1, {}mks to save2, {}mks alltogether in parallel",
+        saveTime1 / 1000,
+        saveTime2 / 1000,
+        allTime / 1000);
+    assertTrue(allTime < saveTime1 + saveTime2);
     FileUtils.deleteDirectory(savePath.toFile());
   }
 
