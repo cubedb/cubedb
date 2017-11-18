@@ -1,6 +1,7 @@
 package org.cubedb.core;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import org.apache.commons.io.output.NullOutputStream;
 import org.junit.Test;
@@ -28,6 +29,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 
 public class CubeImplTest {
   public static final Logger log = LoggerFactory.getLogger(CubeImplTest.class);
@@ -378,5 +380,50 @@ public class CubeImplTest {
 
     log.info("Reading from gzip file took {}ms", (loadT1End - loadT1Start) / 1000000);
     log.info("Reading from snappy file took {}ms", (loadT2End - loadT2Start) / 1000000);
+  }
+
+  @Test
+  public void getPartitions() {
+    Cube cube = new CubeImpl("ts");
+
+    // fill cube with partitions p_0, p_1, p_2
+    List<DataRow> out = new ArrayList<>();
+    for (int i = 0; i <= 2; i++) {
+      List<DataRow> data = TestUtils.genMultiColumnData("f", 1, 1);
+      String partition = "p_" + i;
+      for (DataRow d : data) {
+        d.setPartition(partition);
+        out.add(d);
+      }
+    }
+    cube.insert(out);
+
+    TreeSet<String> expected = new TreeSet<>();
+    // all partitions
+    for (int i = 0; i <= 2; i++) {
+      expected.add("p_" + i);
+    }
+    // get all partitions
+    assertEquals(expected, cube.getPartitions("p_0", "p_2"));
+    // get all partitions by nulls
+    assertEquals(expected, cube.getPartitions(null, null));
+
+    // get 0 and 1 partitions
+    expected.clear();
+    for (int i = 0; i <= 1; i++) {
+      expected.add("p_" + i);
+    }
+    assertEquals(expected, cube.getPartitions("p_0", "p_1"));
+    // behaviour with from=null should be same to from="p_0"
+    assertEquals(expected, cube.getPartitions(null, "p_1"));
+
+    // get 1 and 2 partitions
+    expected.clear();
+    for (int i = 1; i <= 2; i++) {
+      expected.add("p_" + i);
+    }
+    assertEquals(expected, cube.getPartitions("p_1", "p_2"));
+    // behaviour with to=null should be same to to="p_2"
+    assertEquals(expected, cube.getPartitions("p_1", null));
   }
 }

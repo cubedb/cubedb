@@ -330,7 +330,7 @@ public class CubeImpl implements Cube {
         .keySet()
         .stream()
         .filter(p -> from == null || from.compareTo(p) <= 0)
-        .filter(p -> from == null || to.compareTo(p) >= 0)
+        .filter(p -> to == null || to.compareTo(p) >= 0)
         .sorted()
         .collect(Collectors.toCollection(TreeSet::new));
   }
