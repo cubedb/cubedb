@@ -2,7 +2,7 @@
 
 # CubeDB
 
-A simple, stupid and fast in-memory multi-key counter store.
+A simple, stupid and fast in-memory multi-key counter store. See [demo](https://cubedb.github.io/homicide-report/).
 
 ## Synopsis
 
