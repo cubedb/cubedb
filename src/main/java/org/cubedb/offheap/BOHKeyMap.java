@@ -60,7 +60,7 @@ public class BOHKeyMap implements KeyMap {
         this.map.put(e.getKey(), e.getValue());
       }
       oldMap.clear();
-      log.debug("Resizing done in {} mks", (System.nanoTime() - t0) / 1000);
+      log.debug("Resizing done in {} μs", (System.nanoTime() - t0) / 1000);
     }
   }
 

@@ -242,7 +242,7 @@ public class OffHeapPartition implements Partition {
     long t1 = System.nanoTime() - t0;
     long rowsPerSecond = 1000000000L * data.size() / t1;
     log.info(
-        "Took {}ms to insert {} rows, {}mks/row",
+        "Took {}ms to insert {} rows, {}μs/row",
         t1 / 1000 / 1000,
         data.size(),
         t1 / data.size() / 1000);
