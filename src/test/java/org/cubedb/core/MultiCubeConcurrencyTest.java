@@ -41,7 +41,7 @@ public class MultiCubeConcurrencyTest {
     final long getTime = t2 - t1;
     final long allTime = t3 - t0;
     log.info(
-        "Took {}mks to save, {}mks to get, {}mks alltogether in parallel",
+        "Took {}μs to save, {}μs to get, {}μs alltogether in parallel",
         saveTime / 1000,
         getTime / 1000,
         allTime / 1000);
@@ -73,7 +73,7 @@ public class MultiCubeConcurrencyTest {
     final long saveTime2 = s2.totalTimeNs;
     final long allTime = t1 - t0;
     log.info(
-        "Took {}mks to save1, {}mks to save2, {}mks alltogether in parallel",
+        "Took {}μs to save1, {}μs to save2, {}μs alltogether in parallel",
         saveTime1 / 1000,
         saveTime2 / 1000,
         allTime / 1000);
