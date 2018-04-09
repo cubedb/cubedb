@@ -415,11 +415,14 @@ public class OffHeapPartition implements Partition {
        */
       for (int matcherId = 0; matcherId < matchersArray.length; matcherId++) {
         IdMatcher matcher = matchersArray[matcherId];
-        columnMatches[matcherId] = true;
         final int valueId = columns[matcherId].get(i);
         columnValues[matcherId] = valueId;
+
         if (matcher != null) {
           columnMatches[matcherId] = matcher.match(valueId);
+        } else {
+          // If no matcher is set for this column we consider it matched
+          columnMatches[matcherId] = true;
         }
       }
 
