@@ -1,5 +1,7 @@
 ![CubeDb][image_logo]
 
+[![Build Status](https://travis-ci.org/cubedb/cubedb.svg?branch=master)](https://travis-ci.org/cubedb/cubedb)
+
 # CubeDB
 
 A simple, stupid and fast in-memory multi-key counter store. See [demo](https://cubedb.github.io/homicide-report/).
