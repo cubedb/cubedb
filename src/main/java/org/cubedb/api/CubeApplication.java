@@ -4,6 +4,7 @@ import org.cubedb.api.ext.JsonIteratorConverter;
 import org.cubedb.api.filters.AccessOriginFilter;
 import org.cubedb.api.filters.GenericExceptionMapper;
 import org.cubedb.api.resources.CubeResource;
+import org.cubedb.api.resources.IndexResource;
 import org.cubedb.core.Constants;
 import org.cubedb.core.MultiCube;
 import org.cubedb.core.MultiCubeImpl;
@@ -25,6 +26,7 @@ public class CubeApplication extends ResourceConfig {
 
   public CubeApplication(ServerConfiguration config, MultiCube cube) {
     this.cube = cube;
+    registerInstances(new IndexResource());
     registerInstances(new CubeResource(this.cube));
   }
 
