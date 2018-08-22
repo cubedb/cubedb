@@ -528,7 +528,7 @@ Run the following in the root of the CubeDB repository:
 
 ```shell
 docker build -t cubedb .
-docker run -t -p 9998:9998 --rm cubedb
+docker run -it -p 9998:9998 --rm cubedb
 ```
 
 CubeDB will then be available on the default port (9998).
