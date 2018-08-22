@@ -1,7 +1,4 @@
 #!/bin/sh
-DUMP_PATH="/tmp/cubedumps"
-LOG_PROPERTIES="log4j.properties"
-PORT=80
-LOG_OPTS="-Dlog4j.configuration=$LOG_PROPERTIES"
+# env vars defined on Dockerfile
 
-/opt/jdk/bin/java -XX:MaxDirectMemorySize=10G -Xmx2000M  $LOG_OPTS -jar /opt/cubedb/cubedb.jar $PORT $DUMP_PATH
+java -XX:MaxDirectMemorySize=10G -Xmx2000M  $LOG_OPTS -jar $TARGET_DIR/cubedb.jar $PORT $DUMP_PATH
