@@ -498,7 +498,7 @@ POST-ing to `http://localhost:9998/v1/saveJSON` will dump whole database in huma
 **Requirements:** you need git, JDK 8 and Maven to be installed on your system
 
 ```shell
-git clone git@github.com:sztanko/cubedb.git
+git clone git@github.com:cubedb/cubedb.git
 cd cubedb/
 mvn package -DskipTests
 mv target/cubedb-*-SNAPSHOT.jar cubedb.jar
@@ -508,13 +508,13 @@ java -jar cubedb.jar <port> <path_for_dumps>
 I recommend creating a `run.sh` file that would run it for you.
 
 ```shell
-path="/tmp/cubedumps" # Directory for dumps
+dump_path="/tmp/cubedumps"
 log_properties="log4j.properties" # Create your own log4.properties
-port=9998 # port
-jmx_port=5010 # monitoring port
+port=9998
+jmx_port=5010                     # Monitoring port
 flightRecordsOpts="-XX:+UnlockCommercialFeatures -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.port=$jmx_port"
 logOpts="-Dlog4j.configuration=$log_properties"
-/usr/java/jdk1.8.0_60/bin/java -XX:MaxDirectMemorySize=10G -Xmx2000M $flightRecordsOpts $logOpts -jar cubedb.jar $port $path
+/usr/java/jdk1.8.0_60/bin/java -XX:MaxDirectMemorySize=10G -Xmx2000M $flightRecordsOpts $logOpts -jar cubedb.jar $port $dump_path
 ```
 
 ### Stopping the server
@@ -523,15 +523,15 @@ Just Ctrl-C the task and wait a little bit. It is advised to save the data befor
 
 ### Running on Docker
 
-It's possible to build and run CubeDB in a container using a supplied Dockerfile. Given a working
-Docker server/client on the machine run the following in the root of the CubeDB repository:
+It's possible to build and run CubeDB in a container using the supplied Dockerfile.
+Run the following in the root of the CubeDB repository:
 
 ```shell
 docker build -t cubedb .
-docker run -t -p 80:80 cubedb
+docker run -t -p 9998:9998 --rm cubedb
 ```
 
-CubeDB will then be available on the default HTTP port.
+CubeDB will then be available on the default port (9998).
 
 ## Technical details
 
