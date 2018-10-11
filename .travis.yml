@@ -5,6 +5,7 @@ cache:
     - $HOME/.m2/repository
 
 matrix:
+  fast_finish: true
   include:
   - java: oraclejdk8
   - java: openjdk8
