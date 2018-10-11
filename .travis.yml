@@ -4,11 +4,12 @@ cache:
   directories:
     - $HOME/.m2/repository
 
+jdk:
+- oraclejdk8
+- openjdk8
+
 matrix:
   fast_finish: true
-  include:
-  - jdk: oraclejdk8
-  - jdk: openjdk8
   allow_failures:
   - jdk: oraclejdk9
   - jdk: openjdk9
