@@ -1,11 +1,5 @@
 language: java
 
-java:
-  - oraclejdk8
-  - openjdk8
-  - oraclejdk9
-  - openjdk9
-
 cache:
   directories:
     - $HOME/.m2/repository
@@ -13,8 +7,8 @@ cache:
 matrix:
   fast_finish: true
   include:
-  - java: oraclejdk8
-  - java: openjdk8
+  - jdk: oraclejdk8
+  - jdk: openjdk8
   allow_failures:
-  - java: oraclejdk9
-  - java: openjdk9
+  - jdk: oraclejdk9
+  - jdk: openjdk9
