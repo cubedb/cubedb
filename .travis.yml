@@ -1,8 +1,13 @@
 language: java
-jdk:
-  - oraclejdk8
-  - oraclejdk9
-  - openjdk8
+
 cache:
   directories:
     - $HOME/.m2/repository
+
+matrix:
+  include:
+  - java: oraclejdk8
+  - java: openjdk8
+  allow_failures:
+  - java: oraclejdk9
+  - java: openjdk9
