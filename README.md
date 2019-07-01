@@ -93,7 +93,7 @@ Now insert a single data point:
   }
 ]
 EOF
-> echo "$json" | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://localhost:9998/v1/insert`
+> echo "$json" | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://localhost:9998/v1/insert
 {
   "header": {
     "requestTs": 1508939480327,
@@ -168,7 +168,7 @@ Put one more data point into another partition:
   }
 ]
 EOF
-> echo $json | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://localhost:9998/v1/insert`
+> echo $json | curl -s --data-binary "@-" -H "Content-Type: text/json" -X POST http://localhost:9998/v1/insert
 {
   "header": {
     "requestTs": 1508941112127,
